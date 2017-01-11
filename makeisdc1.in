@@ -42,7 +42,8 @@ LIB_SOURCES		= ${LIB_F90_SOURCES}   \
 			  dal3ibis_ica_ctxt.c  \
 			  dal3ibis_ica_noisy.c \
 			  dal3ibis_ica_list.c \
-			  dal3ibis_ica_eff.c 
+			  dal3ibis_ica_eff.c  \
+			  dal3ibis_ica_energy.c 
 
 
 _LIB_F90_SOURCES	= ${LIB_F90_EARLY_SOURCES} \
@@ -63,7 +64,8 @@ LIB_OBJECTS		= ${LIB_F90_OBJECTS}   \
 			  dal3ibis_ica_ctxt.o  \
 			  dal3ibis_ica_noisy.o \
 			  dal3ibis_ica_list.o  \
-			  dal3ibis_ica_eff.o 
+			  dal3ibis_ica_eff.o  \
+			  dal3ibis_ica_energy.o 
 
 
 _LIB_F90_OBJECTS	= ${LIB_F90_EARLY_OBJECTS} \

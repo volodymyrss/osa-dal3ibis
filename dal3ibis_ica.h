@@ -710,10 +710,17 @@ int DAL3IBISGetlowthresholdKev( dal_element *ctxtPtr,
                              
 
 *****************************************************************************/
-int DAL3IBISTransformISGRIEnergy(dal_element 
-				OBTime      limTime, 
-				float        *dataBuff, 
+int DAL3IBISGetISGRIEnergy(dal_element *ogPtr, 
 				int          status);
+
+int DAL3IBIS_MceIsgriHkCal(dal_element *workGRP,
+        OBTime       obtStart,
+        OBTime       obtEnd,
+        double       meanT[8],
+        double       meanBias[8],
+        int          chatter,
+        int          status);
+
 
 /*****************************************************************************
 
@@ -732,10 +739,10 @@ int DAL3IBISTransformISGRIEnergy(dal_element
                              
 
 *****************************************************************************/
-int DAL3IBISGetISGRIEfficiency(dal_element 
+/*int DAL3IBISGetISGRIEfficiency(dal_element 
 				OBTime      limTime, 
 				float        *dataBuff, 
-				int          status);
+				int          status);*/
 
 #ifndef __CINT__
 #ifdef __cplusplus
