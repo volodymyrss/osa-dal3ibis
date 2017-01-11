@@ -1,0 +1,201 @@
+2012-01-30  Reiner Rohlfs  <reiner.rohlfs@unige.ch>
+	dal3ibis 5.5
+	* dal3ibis_ica.h (DAL3IBISicaIsgriNoisEff): SPR 5011
+	new ROOT version (5.23) requires a special definition
+	for eff_time and num_pixOff
+
+2006-08-01  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+	dal3ibis 5.4.1
+	* dal3ibis_events.c (DAL3IBIScalculateAllEventGaps): SPR 4531,
+	Deal with the wrap around of the SSC in calculating the number
+	of missed packets.
+
+2006-03-15  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+	dal3ibis 5.4.0
+	* dal3ibis_events.c (DAL3IBIScalculateAllEventGaps): SPR 4440,
+	basically do the same fix as SPR 3822 in another place
+
+2005-04-13  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+	dal3ibis 5.3.1
+	* makeisdc1.in (${LIB_FULL_NAME}): SPR 4046, add a ranlib
+	
+2005-02-03  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+	dal3ibis 5.3.0
+	* dal3ibis_ica_ctxt.c (DAL3IBISGetlowthresholdKev): SCREW 1612,
+	replace this function with one supplied by  Severin CHAZALMARTIN
+	<chazalse@discovery.saclay.cea.fr>
+
+2005-02-02  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+	dal3ibis 5.2.2
+	* dal3ibis_ica_ctxt.c: SPR 3971, remove a printf and the
+	surrounding if statement.
+
+2004-08-24  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+	dal3ibis 5.2.1
+	* dal3ibis_events.c (DAL3IBIScalculateAllEventGaps): SPR 3822, fix
+	a bug where SPR 3503 was not fixed correctly.  This has been
+	tested by running all revolutions up to 216 and comparing the
+	output from findEventGaps and findAllEventGaps with samplec_gaps.
+	This now seems ok.
+
+2004-05-20  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+	dal3ibis 5.1.0
+	* dal3ibis_events.c (MergeTwoLists): SCREW 1462 - Removed, call
+	the DAL3GEN one.
+
+2004-04-28  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+	dal3ibis 5.0.1
+	* dal3ibis_events.c (DAL3IBISshowAllEvents): SPR 3565, only loop
+	up to 3.
+
+2004-03-30  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+	dal3ibis 5.0.0
+	* dal3ibis_events.c (MergeTwoLists): Added from dal3gen_events.c.
+	SCREW 1388
+	(DAL3IBISshowAllEvents): Undid the changes on 24/3 and found the
+	all structures and merged them.
+
+2004-03-24  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+
+	* dal3ibis_events.c (DAL3IBISshowAllEvents): SCREW 1388, really do
+	ALL events as well.
+	(DAL3IBISfindGapsOBT): The test should be that numChildrenPrp is
+	0, not status != ISDC_OK.  SCREW 1388
+
+2004-03-23  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+
+	* dal3ibis_events.c (DAL3IBISshowAllEvents): SCREW 1388, Do ALL
+	events as well.
+	(DAL3IBISfindGapsOBT): SCREW 1388, do ALL data as well.
+
+2004-03-09  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+	dal3ibis 4.3.7
+	* dal3ibis_events.c (DAL3IBIScalculateAllEventGaps): SPR 3503.
+	Think of this as fixing SPR 3160 again.  There are three places
+	where the plage is inserted.  SPR 3160 caught one, this fix
+	catches the other two.  
+
+2004-01-15  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+	dal3ibis 4.3.6
+	* dal3ibis.h: SCREW 1326, add version string.
+
+2003-11-13  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+	dal3ibis 4.3.5
+	* dal3ibis_events.c (DAL3IBIScalculateAllEventGaps): SPR 3160, fix
+	a case where an end was before a begin.
+
+2003-10-17 Laurent Lerusse <laurent.lerusse@obs.unige.ch>
+	dal3ibis 4.3.4
+	* dal3ibis_ica.h add one error code
+	* dal3ibis_ica_eff.c rewrote the function SPR 3056, 3246, 3247
+2003-10-01 Nicolas Produit <Nicolas.Produit@obs.unige.ch>
+	dal3ibis 4.3.3
+	* dal3ibis.h add one error code
+	* dal3ibis_events.c add core for SPR 3223
+2003-08-21 Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+	dal3ibis 4.3.2
+	* dal3ibis_ica.h: SPR 3167.  Sub HAVE_CERN_ROOT for
+	COMPILING_CINT_FILES.
+2003-08-15 Nicolas Produit <Nicolas.Produit@obs.unige.ch>
+        SPR 3159
+2003-08-13 Nicolas Produit <Nicolas.Produit@obs.unige.ch>
+        dal3ibis 4.3.0
+        correct SPR 3145
+        implement SCREW 1190 and 1188
+        remove get_dummy_f90 wich is wrong and not usefull
+        correct some trivialities (unused variable, tab in fortran, %ld format)
+
+2003-07-01  Laurent Lerusse  <laurent.lerusse@obs.unige.ch>
+	dal3ibis 4.2.1
+	* dal3ibis_ica_coord.c: SPR 3084, change completly the algorithm.
+
+2003-05-13  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+	dal3ibis 4.2.0
+	* dal3ibis_ica_list.c: SPR 2974, add a break so that the default
+	is not taken.
+
+2003-04-25  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+	dal3ibis 4.1.9
+	* dal3ibis_ica_list.c: Fix some ().  SPR 2755.
+
+	* dal3ibis_ica_misc.c (DAL3IBISicaGetSize): SPR 830 fixes.
+
+2003-04-23  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+	dal3ibis 4.1.8
+	*  (Repository): SPR 2857, fix the A160s to A256s in the grouping
+	files to work on long directories.
+
+2003-02-24  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+	dal3ibis 4.1.7
+	* dal3ibis_events.c (DAL3IBISgetDummy): Well, let's make it
+	unsigned long - SPR 2710.
+
+2003-02-19  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+	dal3ibis 4.1.6
+	* dal3ibis_events.c (DAL3IBISgetDummy): Change SecondDummy to
+	unsigned - SPR 2710
+
+2003-02-14  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+	dal3ibis 4.1.5
+	* dal3ibis_events.c (DAL3IBIScalculateEventGaps): SPR 2684, the
+	last event number was calculated incorrectly.
+
+2003-02-13  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+	dal3ibis 4.1.4
+	* dal3ibis_events.c (DAL3IBIScalculateEventGaps): Duh, SPR 2676,
+	thanks to Reiner for finding a case where a variable was used for
+	two disjoint cases.
+
+2003-01-15  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+	dal3ibis 4.1.3
+	* dal3ibis_ica_list.c (DAL3IBISgetSwitchList) : SPR 2202 changed
+	this so that listlength became an input as well as an output
+	parameter. 
+
+2003-01-07  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+
+	* dal3ibis_ica.h: Update as per SPR 2202
+
+2002-11-04  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+	--- dal3ibis 4.1.2
+	* dal3ibis_events.c (DAL3IBIScalculateEventGaps): SPR 2174, deal
+	with SSC rollovers correctly
+
+	* dal3ibis_ica_f90_bind.c: Comment out DAL3IBISgetNoisyMaps -
+	SCREW 841.
+
+	* dal3ibis_ica_f90_api.f90: Comment out DAL3IBISgetNoisyMaps -
+	SCREW 841.
+
+2002-10-10  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+
+	* dal3ibis_ica_f90_bind.c: Update the f90 bindings - SPR 2072.
+
+2002-10-08  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+
+	* dal3ibis_ica_ctxt.c (DAL3IBISctxtGetTblPar): Add a break, SPR 2052.
+
+2002-09-16  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+
+	* dal3ibis_ica_list.c: memory leak in the malloc of columns, SPR
+	1927.
+
+	* dal3ibis_events.c (DAL3IBISselectEvents): Change the call to
+        DAL3GENselectEvents to add inputDS for SPR 1942.  This is because
+        before DAL3GENselectEvents assumed that we had the same number of
+        selected structures as we had science windows.  Not all science
+        windows have all structures now thanks to cleanswg so we can't
+        make this assumption anymore.
+
+
+2002-08-23  James Peachey <peachey@lheamail.gsfc.nasa.gov>
+
+	* dal3aux.h: SPR 1766. Change usages of the macro ROOT
+	to HAVE_CERN_ROOT.
+
+
+2002-05-02  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+
+	* dal3ibis_ica_noisy.c (DAL3IBISgetNoisyMaps): SPR733, free
+	columns 
+

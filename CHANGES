@@ -1,0 +1,317 @@
+2003-10-17 Laurent Lerusse <laurent.lerusse@obs.unige.ch>
+	dal3ibis 4.3.4
+	* dal3ibis_ica.h add one error code
+	* dal3ibis_ica_eff.c rewrote the function SPR 3056, 3246, 3247
+2003-10-01 Nicolas Produit <Nicolas.Produit@obs.unige.ch>
+	dal3ibis 4.3.3
+	* dal3ibis.h add one error code
+	* dal3ibis_events.c add core for SPR 3223
+2003-08-21 Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+	dal3ibis 4.3.2
+	* dal3ibis_ica.h: SPR 3167.  Sub HAVE_CERN_ROOT for
+	COMPILING_CINT_FILES.
+2003-08-15 Nicolas Produit <Nicolas.Produit@obs.unige.ch>
+	SPR 3159
+2003-08-13 Nicolas Produit <Nicolas.Produit@obs.unige.ch>
+        dal3ibis 4.3.0
+        correct SPR 3145
+        implement SCREW 1190 and 1188
+	remove get_dummy_f90 wich is wrong and not usefull
+	correct some trivialities (unused variable, tab in fortran, %ld format)
+
+2003-07-01  Laurent Lerusse  <laurent.lerusse@obs.unige.ch>
+	dal3ibis 4.2.1
+	* dal3ibis_ica_coord.c: SPR 3084, change completly the algorithm.
+
+2003-05-13  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+	dal3ibis 4.2.0
+	* dal3ibis_ica_list.c: SPR 2974, add a break so that the default
+	is not taken.
+
+2003-04-25  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+	dal3ibis 4.1.9
+	* dal3ibis_ica_list.c: Fix some ().  SPR 2755.
+
+	* dal3ibis_ica_misc.c (DAL3IBISicaGetSize): SPR 830 fixes.
+
+2003-04-23  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+	dal3ibis 4.1.8
+	*  (Repository): SPR 2857, fix the A160s to A256s in the grouping
+	files to work on long directories.
+
+2003-02-24  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+	dal3ibis 4.1.7
+	* dal3ibis_events.c (DAL3IBISgetDummy): Well, let's make it
+	unsigned long - SPR 2710.
+
+2003-02-19  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+	dal3ibis 4.1.6
+	* dal3ibis_events.c (DAL3IBISgetDummy): Change SecondDummy to
+	unsigned - SPR 2710
+
+2003-02-14  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+	dal3ibis 4.1.5
+	* dal3ibis_events.c (DAL3IBIScalculateEventGaps): SPR 2684, the
+	last event number was calculated incorrectly.
+
+2003-02-13  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+	dal3ibis 4.1.4
+	* dal3ibis_events.c (DAL3IBIScalculateEventGaps): Duh, SPR 2676,
+	thanks to Reiner for finding a case where a variable was used for
+	two disjoint cases.
+
+2003-01-15  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+	dal3ibis 4.1.3
+	* dal3ibis_ica_list.c (DAL3IBISgetSwitchList) : SPR 2202 changed
+	this so that listlength became an input as well as an output
+	parameter. 
+
+2003-01-07  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+
+	* dal3ibis_ica.h: Update as per SPR 2202
+
+2002-11-04  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+	--- dal3ibis 4.1.2
+	* dal3ibis_events.c (DAL3IBIScalculateEventGaps): SPR 2174, deal
+	with SSC rollovers correctly
+
+	* dal3ibis_ica_f90_bind.c: Comment out DAL3IBISgetNoisyMaps -
+	SCREW 841.
+
+	* dal3ibis_ica_f90_api.f90: Comment out DAL3IBISgetNoisyMaps -
+	SCREW 841.
+
+2002-10-10  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+
+	* dal3ibis_ica_f90_bind.c: Update the f90 bindings - SPR 2072.
+
+2002-10-08  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+
+	* dal3ibis_ica_ctxt.c (DAL3IBISctxtGetTblPar): Add a break, SPR 2052.
+
+2002-09-16  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+
+	* dal3ibis_ica_list.c: memory leak in the malloc of columns, SPR
+	1927.
+
+	* dal3ibis_events.c (DAL3IBISselectEvents): Change the call to
+        DAL3GENselectEvents to add inputDS for SPR 1942.  This is because
+        before DAL3GENselectEvents assumed that we had the same number of
+        selected structures as we had science windows.  Not all science
+        windows have all structures now thanks to cleanswg so we can't
+        make this assumption anymore.
+
+
+2002-08-23  James Peachey <peachey@lheamail.gsfc.nasa.gov>
+
+	* dal3aux.h: SPR 1766. Change usages of the macro ROOT
+	to HAVE_CERN_ROOT.
+
+
+2002-05-02  Bruce O'Neel  <bruce.oneel@obs.unige.ch>
+
+	* dal3ibis_ica_noisy.c (DAL3IBISgetNoisyMaps): SPR733, free
+	columns 
+
+------------------------------------------------------------------------
+27 AUG 2002 V 4.0.1
+------------------------------------------------------------------------
+27.08: SPR1766: Use HAVE_CERN_ROOT macro instead of ROOT.
+------------------------------------------------------------------------
+10 MAY 2002 V 4.0.0
+------------------------------------------------------------------------
+02.05: SPR0733: Free columns in DAL3IBISgetNoisyMaps, unit test added
+
+------------------------------------------------------------------------
+06 NOV 2001 VERSION 3.5.6
+------------------------------------------------------------------------
+05.11: SPR0725: Fixed a bug making "DAL3IBISfindEventGaps" read bad rows
+
+------------------------------------------------------------------------
+28 SEP 2001 VERSION 3.5.5
+------------------------------------------------------------------------
+28.09: SPR0475: Moved NULL "&" string treatment into F90
+
+------------------------------------------------------------------------
+09 AUG 2001 VERSION 3.5.1
+------------------------------------------------------------------------
+23.07: SPR0524: Fixed wrong F90 interface to "DAL3IBISfindGapsOBT"
+
+------------------------------------------------------------------------
+21 MAY 2001 VERSION 3.5.0
+------------------------------------------------------------------------
+17.05: SPR0444: Fix access problems to isolated data structures
+16.05: SPR0455: Fixed test data, which were not compatible anymore
+                Added "TESTING" script
+
+------------------------------------------------------------------------
+02 MAY 2001 VERSION 3.4.2
+------------------------------------------------------------------------
+01.05: SPR0389: Removed multiple definition of a variable
+01.05: SPR0392: Implemented a multipart SPR: Fixed wrong extension name,
+                missing symbols, treatment of NO_OBT, missing "break" in
+                switch, insufficient alloc size, wrong selection, bad
+                pixel position
+
+------------------------------------------------------------------------
+09 APR 2001 VERSION 3.4.1
+------------------------------------------------------------------------
+09.04: SPR0371: Fixed a typo in the "DAL3IBISicaGetSize" function
+
+------------------------------------------------------------------------
+08 APR 2001 VERSION 3.4.0
+------------------------------------------------------------------------
+08.04: SCR0180: The ICA APIs have been completely revised. This part of
+                DAL3IBIS is now isolated at the file level to ease the
+                concurrent development.
+20.03: SPR0219: "DAL3IBISfindEventGaps" returns "GAPS_NO_OBT" if no PRP
+                data can be found.
+28.02: SPR0235: Fixed a bug in the determination of valid levels
+27.03: SPR0337: Obsolete "OBTIME" symbols replaced by "OBTime"
+
+------------------------------------------------------------------------
+23 DEC 2000 VERSION 3.3.0
+------------------------------------------------------------------------
+23.12: SCR0126: The "SELECT_FLAG" property is now part of COR data
+18.12: SPR0136: "DAL3IBISfindEventGaps" now returns "NO_EVENTS" when
+                called without event data
+
+------------------------------------------------------------------------
+26 SEP 2000 VERSION 3.0.1   --->   VERSION 3.2.0
+------------------------------------------------------------------------
+ 1. Implement the OBT selection optimization from DAL3GEN 3.2
+
+ 2. Fixed a bug in "DAL3IBISfindGapsOBT"
+
+ 3. Catches internal DAL3GEN error codes for events
+
+------------------------------------------------------------------------
+30 MAY 2000 VERSION 3.0.0   --->   VERSION 3.0.1
+------------------------------------------------------------------------
+ 1. Fixed wrong backward-compatibility symbol
+
+------------------------------------------------------------------------
+11 MAY 2000 VERSION 2.2.5   --->   VERSION 3.0.0
+------------------------------------------------------------------------
+ 1. Removed the event treatment from DAL3JEMX and put it in DAL3GEN
+
+ 2. Made the header file isdcroot-friendly
+
+ 3. For consistency, the "IBIS_evpar" enumaration is now called
+    "IBIS_params"
+
+ 4. Uses now "DAL3 Lists" to speed up processing
+
+ 5. Fixed "bugsinos" in the bindings
+
+ 6. Removed DAL3 subsets from the sample programs
+
+ 7. Added a parameter to the C version of "DAL3IBISgetEventPackets"
+
+------------------------------------------------------------------------
+21 FEB 2000 VERSION 2.2.1   --->   VERSION 2.2.5
+------------------------------------------------------------------------
+1. The library uses now Makefile-2.0.1
+
+2. The library requires now DAL3GEN 2.4
+
+3. The library now installs "dal3ibis_f90_api_local.mod" for some non-SUN
+   F90 compilers
+
+4. The library now installs the User's Manual in the help area
+
+5. Implements the new ISDCLevel concept from TN020
+
+6. The ICA functions have been modified to handle the new template for
+   the noisy pixels map 
+   
+7. The different switch lists are now stored in two separate Data
+   Structure 
+
+8. Added a F90 interface to DAL3IBISgetPixStatusMap
+
+------------------------------------------------------------------------
+29 OCT 1999 VERSION 2.2.0   --->   VERSION 2.2.1
+------------------------------------------------------------------------
+1. Fixed a bug that prevented the reading of some COMPTON event
+   parameters.
+
+------------------------------------------------------------------------
+01 SEP 1999 VERSION 2.1.0   --->   VERSION 2.2.0
+------------------------------------------------------------------------
+1. New DAL3IBIS APIs for ICA are included (written by L.Lerusse)
+
+2. Correct a small bug that prevents the correct reading of COMPTON mode
+   Delta-Times.
+
+3. New "samplec_ica.c" and samplef90_ica.f90" executables and test data
+
+------------------------------------------------------------------------
+22 AUG 1999 VERSION 2.0.1   --->   VERSION 2.1.0
+------------------------------------------------------------------------
+1. The library now uses DAL 1.3 and Makefile-1.3.1
+
+2. Changed variable and parameter names in accordance with the CTS.
+   Defined new symbols for parameters.
+
+3. The APIs do not create automatically an IBIS_SUBSET anymore.
+
+4. Event table descriptions are now static global variables, and they
+   are more widely used.
+
+5. Better internal error handling. Now intermediate subsets are properly
+   deleted in case of error.
+
+6. The event access APIs now work with a single data structure.
+
+7. Fixed a bug in "DAL3IBIScloseEvents" API, which tried to close non-
+   existing data structures.
+
+8. Some bug fixes related to allocation of internal buffers.
+
+9. Changed "samplec" and "samplef90" so that the user can really "play"
+   with it. 
+ 
+------------------------------------------------------------------------
+18 JUN 1999 VERSION 2.0.0   --->   VERSION 2.0.1
+------------------------------------------------------------------------
+ 1. The internal event subset is now (more!) safely closed.
+ 
+ 2. Fixed bug in "DAL3IBISshowAllEvents", due to uninitialization of
+    some variables.
+
+ 3. Fixed a bug in "DAL3IBIScloseEvents", which tried to close the
+    event subset.
+
+ 4. Discovered the DALbuildSubset problem!!!
+
+ 5. Corrected the "DAL_DELETE" close in "samplef90"
+
+ 6. Update of the documentation...
+ 
+ 7. "INEXISTANT" becomes "INEXISTENT"
+
+------------------------------------------------------------------------
+27 MAY 1999 VERSION 1.0.0   --->   VERSION 2.0.0
+------------------------------------------------------------------------
+ 1. Version is now at 2.0, as it requires DAL3GEN 2.0 at least to work.  
+
+ 2. Complete change in the selection procedure in order to take adavntage 
+    of the (future) Virtual Table APIs of DAL 1.3. There is now an Event 
+    Selection API "DAL3IBISselectEvents", whose use is mandatory before  
+    any access to the events. "DAL3IBISgetNumEvents" and                 
+    "DAL3IBISgetEvents" are now very simplified, as the selection is     
+    already performed when they are called.                              
+
+ 3. Added new APIs to manipulate packets.                                
+
+ 4. Added new APIs to manipulate dummy events.                           
+
+ 5. A User Manual is now present                                         
+
+ 6. Two sample programs are provided, together with some test data
+
+------------------------------------------------------------------------
+10 MAR 1999 VERSION 1.0.0
+------------------------------------------------------------------------
+First version

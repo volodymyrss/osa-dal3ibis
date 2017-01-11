@@ -1,0 +1,94 @@
+#! /bin/sh
+#
+# DAL3IBIS contains two sample programs, which are built whith the library:
+#
+#   samplec
+#   samplef90
+#
+# to illustrate some DAL3IBIS functionalities. To test these executables,
+# you have to:
+#
+#   - untar the test_data.tar tar file:
+#         tar xvf test_data.tar
+#
+#   - launch the samplec OR samplef90 executable with some arguments, e.g.:
+#         ./samplec 'test_data/og_l2.fits[1]' 0 1 11
+#
+# See DAL3IBIS User's Manual for a description of the meaning of the parameters
+#
+# You can run these test programs by executing this file.
+# It will check for the existence of "samplec" and "samplef90"
+# and prepare the test data .
+# Finally, it prints a summary indicating whether the execution
+# succeeded or not.
+#
+# You can disable the output of the programs to make the testing
+# easier by passing '--quiet' or '-q' as an argument to this script.
+#
+# You can disable execution of the C program or of the F90 program
+# by passing '--c-only' or '-c', or '--f90-only' or '-f' respectively.
+#
+# You can compare the result with the 'sample.result' file
+
+QUIET=0
+RUN_C=1
+RUN_F90=1
+CHECK_RUN_C=0
+CHECK_RUN_F90=0
+
+for par in $* ; do
+   case "$1" in
+      -q | --quiet)
+         QUIET=1
+         shift;;
+      -c | --c-only )
+         RUN_F90=0
+         shift;;
+      -f | --f90-only )
+          RUN_C=0
+         shift;;
+      * )
+         shift;;
+   esac
+done
+
+rm -rf test_data
+tar xf ../test_data.tar
+
+rm -rf out
+mkdir out
+
+if [ $RUN_C -eq 1 ] ; then
+   if [ -x ../samplec ] ; then
+         ../samplec 'test_data/og_l2.fits[1]' 0 1 11 > out/samplec.out
+   else
+      echo \'samplec\' is requested, but not found...
+   fi
+fi
+CHECK_RUN_C=`grep -c 'Status' out/samplec.out`
+FAILED_C=`grep 'Status' out/samplec.out | grep -vcw 0`
+
+if [ $RUN_F90 -eq 1 ] ; then
+   if [ -x ../samplef90 ] ; then
+         ../samplef90 'test_data/og_l2.fits[1]' 0 1 11 > out/samplef90.out
+   else
+      echo \'samplef90\' is requested, but not found...
+   fi
+fi
+CHECK_RUN_F90=`grep -c 'Status' out/samplef90.out`
+FAILED_F90=`grep 'Status' out/samplef90.out`
+
+diff out/samplec.out outref/samplec.out
+diff out/samplef90.out outref/samplef90.out
+
+rm -rf test_data
+
+tar xf ../test_data_ica.tar
+
+../samplec_ica > out/samplec_ica.out
+
+../samplef90_ica > out/samplef90_ica.out
+rm out/samplef90_ica.out
+rm outref/samplef90_ica.out
+diff out/samplec_ica.out outref/samplec_ica.out
+#diff out/samplef90_ica.out outref/samplef90_ica.out

@@ -1,0 +1,66 @@
+******************************************************************************
+
+                DATA ACCESS LAYER 3 - IBIS Version 3.5.5+x
+
+                             ( DAL3IBIS 3.5 )
+
+                        Stephane Paltani      -- ISDC
+                        Laurent  Lerusse      -- ISDC
+
+	                       28 SEP 2001
+
+******************************************************************************
+
+The ISDC Data Access Layer 3 - IBIS (DAL3IBIS) is an ANSI C library, with
+Fortran 90 bindings, whose aim is to help Instrument Team developpers in
+manipulating the ISDC data structures. DAL3IBIS is a layer on top of DAL and
+DAL3GEN, and it is therefore very important to understand the basic concepts of
+DAL before using DAL3IBIS.
+
+DAL3IBIS 3.5 is the last major release of DAL3IBIS. Version 3.5.x are "minor"
+releases, i.e. bug fixes. When "x" is a multiple of 5, then it means that
+a new version of the User Manual has been produced.
+
+DAL3IBIS has been tested on SUN/Solaris 8 (sparc and i386; SUN Forte 6 C and
+F90 (sparc only) compilers) and on Linux (gcc 2.95.2 C compiler and Fujitsu
+F95 Express F90 compiler). Support is very limited on other platforms.
+
+To build DAL3IBIS 3.5.5, The ISDC Support Software version >= 3.1 is required
+In addition, DAL must be upgraded to version 1.4.9 at least!
+
+For Fortran 90 users only: the type INTEGER(KIND=8) must be supported.
+Fortran 90 is however optional, and DAL3IBIS can be installed without it
+
+See the Support Software README to build the DAL3IBIS library together with
+the Support Software or the DAL3IBIS User Manual in case of upgrade.
+
+Executables using DAL3IBIS must be linked with DAL3IBIS (libdal3ibis.a),
+DAL3GEN (libdal3gen.a), DAL (libdal.a) and cfitsio (libcfitsio.a) in order to
+work. Please make sure that your makefiles incorporate these libraries in the
+following order:
+      -ldal3ibis -ldal3gen -ldal -lciftsio
+
+Additionally, all programs using DAL3IBIS directly should include the header
+file dal3ibis.h (for C code) or the DAL3IBIS interface module (for F90 code).
+
+Documentation for DAL3IBIS is included in the dal3ibis.ps file which is
+included with this distribution.
+
+Two sample programs (in C and in F90) are built together with the library.
+See or execute the files 'TESTING' and 'TESTING.ica' for more
+information.
+
+DAL3IBIS is under strict Configuration Control since Support Software
+version 2.0. It means that even the developer of DAL3IBIS cannot fix a
+bug, add or modify a functionality without the approval of ISDC
+Configuration Control Board. If you find a bug in DAL3IBIS, please fill
+a Software Problem Report on ISDC web pages. Alternatively, if
+you wish that some functionality is added or modified, please fill a
+Software Change Request on ISDC web pages.
+
+All files containing "ica" in their names are part of the ICA subsystem for
+IBIS, and have been developed by L.Lerusse. Development and testing of this part 
+of DAL3IBIS are under his responsin\bility, while integration and deliveries is
+done by S.Paltani.  
+
+

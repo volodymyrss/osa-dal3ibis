@@ -1,0 +1,38 @@
+OBJECT            : test_data/og_l2.fits[1]
+TYPE              : 0
+COLUMN            : 1
+SELECTION         : 11
+
+DALobjectOpen
+Status: 0
+
+DAL3IBISshowAllEvents
+ISGRI Events            : 6019
+PICsIT Single Events    : 2073
+PICsIT Multiple Events  : 0
+COMPTON Single Events   : 0
+COMPTON Multiple Events : 0
+Status: 0
+
+DAL3IBISselectEvents
+Status: 0
+
+DAL3IBISgetNumEvents
+Number of Events: 6
+Status: 0
+
+Reading all the events at once...
+DAL3IBISgetEvents
+Status: 0
+Value 1 : 62
+Value 2 : 58
+Value 3 : 67
+Value 4 : 59
+Value 5 : 63
+Value 6 : 106
+
+DAL3IBIScloseEvents
+Status: 0
+
+DALobjectClose
+Status: 0

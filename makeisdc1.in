@@ -1,0 +1,168 @@
+#-*-Makefile-*-
+#*****************************************************************************/
+#*                                                                           */
+#*                       INTEGRAL SCIENCE DATA CENTRE                        */
+#*                                                                           */
+#*                            DAL3 IBIS LIBRARY                              */
+#*                                                                           */
+#*  Authors: Stéphane Paltani, Laurent Lerusse                               */
+#*  Date:    6 November 2001                                                 */
+#*  Version: 3.5.6                                                           */
+#*                                                                           */
+#*****************************************************************************/
+
+# ======================= NAME OF ARCHIVE/TAR FILE  ======================
+#
+# If library is being built, then this usually is set to the name of the
+# library, like: dal, hello, ril, common, etc. Otherwise name is chosen
+# from names of executables/targets defined in this make file.
+
+TAR_FILE_NAME		= dal3ibis-5.5
+
+# ====================== ISDC SOFTWARE TREE BRANCH  ======================
+# 
+# As of version 1.3 (or later) ISDC_BRANCH is not used anymore. It is left
+# for compatibility reasons with older software. You can left it as it is.
+
+ISDC_BRANCH             = ${ISDC_SYS_SW}
+
+# Below is a place for your modifications ...
+
+# ========================= MAIN LIBRARY TARGET ===========================
+# PLEASE CUT&PASTE INTO makeisdc1.in FROM HERE UP TO END OF TARGET DEFN
+#
+LIB_SHORT_NAME		= dal3ibis
+
+LIB_FULL_NAME		= libdal3ibis.a
+
+LIB_SOURCES		= ${LIB_F90_SOURCES}   \
+			  dal3ibis_events.c    \
+			  dal3ibis_ica_misc.c  \
+			  dal3ibis_ica_coor.c  \
+			  dal3ibis_ica_ctxt.c  \
+			  dal3ibis_ica_noisy.c \
+			  dal3ibis_ica_list.c \
+			  dal3ibis_ica_eff.c 
+
+
+_LIB_F90_SOURCES	= ${LIB_F90_EARLY_SOURCES} \
+			  ${LIB_F90_INT8_SOURCES}  \
+			  dal3ibis_ica_f90_api.f90 \
+			  dal3ibis_f90_api.f90     \
+			  dal3ibis_ica_f90_bind.c  \
+			  dal3ibis_f90_bind.c
+
+_LIB_F90_EARLY_SOURCES	= 
+
+_LIB_F90_INT8_SOURCES	=
+
+LIB_OBJECTS		= ${LIB_F90_OBJECTS}   \
+			  dal3ibis_events.o    \
+			  dal3ibis_ica_misc.o  \
+			  dal3ibis_ica_coor.o  \
+			  dal3ibis_ica_ctxt.o  \
+			  dal3ibis_ica_noisy.o \
+			  dal3ibis_ica_list.o  \
+			  dal3ibis_ica_eff.o 
+
+
+_LIB_F90_OBJECTS	= ${LIB_F90_EARLY_OBJECTS} \
+			  ${LIB_F90_INT8_OBJECTS}  \
+			  dal3ibis_ica_f90_api.o   \
+			  dal3ibis_f90_api.o       \
+			  dal3ibis_ica_f90_bind.o  \
+			  dal3ibis_f90_bind.o
+
+_LIB_F90_EARLY_OBJECTS	= 
+
+_LIB_F90_INT8_OBJECTS	=
+
+${LIB_FULL_NAME}:	${LIB_OBJECTS}
+			ar -rv ${LIB_FULL_NAME} ${LIB_OBJECTS}
+			ranlib ${LIB_FULL_NAME}
+
+CLEAN_TARGETS		+= ${LIB_FULL_NAME}
+ALL_TARGETS		+= ${LIB_FULL_NAME}
+TO_INSTALL_BIN		+=
+TO_INSTALL_INC		+= dal3ibis.h
+TO_INSTALL_INC		+= dal3ibis_ica.h
+TO_INSTALL_LIB		+= ${LIB_FULL_NAME}
+TO_INSTALL_HELP		+= ${LIB_SHORT_NAME}.ps
+TO_INSTALL_F90MOD_NORMAL+= dal3ibis_f90_api.${F90MOD_EXT}
+TO_INSTALL_F90MOD_NORMAL+= dal3ibis_ica_f90_api.${F90MOD_EXT}
+TO_INSTALL_F90MOD_NORMAL+= dal3ibis_f90_api_local.${F90MOD_EXT}
+TO_INSTALL_F90MOD_UPPER	+= DAL3IBIS_F90_API.${F90MOD_EXT}
+TO_INSTALL_F90MOD_UPPER	+= DAL3IBIS_ICA_F90_API.${F90MOD_EXT}
+TO_INSTALL_F90MOD_UPPER += DAL3IBIS_F90_API_LOCAL.${F90MOD_EXT}
+_TO_INSTALL_F90MOD_INT8_NORMAL += 
+_TO_INSTALL_F90MOD_INT8_UPPER += 
+TO_INSTALL_PAR		+=
+TO_INSTALL_TEMPLATES	+=
+TO_INSTALL_EXTRA_GLOBAL	+=
+TO_INSTALL_EXTRA_LOCAL	+=
+
+RECURSIVE_CLEAN_TARGETS	+= test_data
+
+# =================== END OF MAIN LIBRARY TARGET  ==========================
+
+# ========================= C EXECUTABLE TARGET  =========================
+# PLEASE CUT&PASTE INTO makeisdc1.in FROM HERE UP TO END OF TARGET DEFN
+#
+C_EXEC_1_NAME		= samplec 
+C_EXEC_1_SOURCES	= samplec.c
+C_EXEC_1_OBJECTS	= samplec.o
+C_EXEC_1_LIBRARIES	= -ldal3ibis -ldal3gen -ldal -lcfitsio ${LAST_LIBS}
+
+${C_EXEC_1_NAME}:	${C_EXEC_1_OBJECTS} ${LIB_FULL_NAME}
+			${CC}  ${ALL_C_CFLAGS} -o ${C_EXEC_1_NAME} ${C_EXEC_1_OBJECTS} ${ALL_C_LDFLAGS} ${C_EXEC_1_LIBRARIES}
+
+CLEAN_TARGETS		+= ${C_EXEC_1_NAME}
+ALL_TARGETS		+= ${C_EXEC_1_NAME}
+# ======================== END OF C EXECUTABLE TARGET  ===================
+
+# ========================= F90 EXECUTABLE TARGET  =========================
+# PLEASE CUT&PASTE INTO makeisdc1.in FROM HERE UP TO END OF TARGET DEFN
+#
+F90_EXEC_1_NAME		= samplef90
+F90_EXEC_1_SOURCES	= samplef90.f90
+F90_EXEC_1_OBJECTS	= samplef90.o
+F90_EXEC_1_LIBRARIES	= -ldal3ibis -ldal3gen -ldal -lcfitsio ${LAST_LIBS}
+
+${F90_EXEC_1_NAME}:	${F90_EXEC_1_OBJECTS} ${LIB_FULL_NAME}
+			${F90}  ${ALL_F90_CFLAGS} -o ${F90_EXEC_1_NAME} ${F90_EXEC_1_OBJECTS} ${ALL_F90_LDFLAGS} ${F90_EXEC_1_LIBRARIES}
+
+CLEAN_F90_TARGETS	+= ${F90_EXEC_1_NAME}
+ALL_F90_TARGETS		+= ${F90_EXEC_1_NAME}
+# ======================== END OF C EXECUTABLE TARGET  ===================
+
+# ========================= C EXECUTABLE TARGET  =========================
+# PLEASE CUT&PASTE INTO makeisdc1.in FROM HERE UP TO END OF TARGET DEFN
+#
+C_EXEC_2_NAME		= samplec_ica 
+C_EXEC_2_SOURCES	= samplec_ica.c
+C_EXEC_2_OBJECTS	= samplec_ica.o
+C_EXEC_2_LIBRARIES	= -ldal3ibis -ldal3gen -lcommon -lpil -lril -ldal -lcfitsio ${LAST_LIBS}
+
+${C_EXEC_2_NAME}:	${C_EXEC_2_OBJECTS} ${LIB_FULL_NAME}
+			${CC}  ${ALL_C_CFLAGS} -o ${C_EXEC_2_NAME} ${C_EXEC_2_OBJECTS} ${ALL_C_LDFLAGS} ${C_EXEC_2_LIBRARIES}
+
+CLEAN_TARGETS		+= ${C_EXEC_2_NAME}
+ALL_TARGETS		+= ${C_EXEC_2_NAME}
+# ======================== END OF C EXECUTABLE TARGET  ===================
+
+# ========================= F90 EXECUTABLE TARGET  =========================
+# PLEASE CUT&PASTE INTO makeisdc1.in FROM HERE UP TO END OF TARGET DEFN
+#
+F90_EXEC_2_NAME		= samplef90_ica
+F90_EXEC_2_SOURCES	= samplef90_ica.f90
+F90_EXEC_2_OBJECTS	= samplef90_ica.o
+F90_EXEC_2_LIBRARIES	= -ldal3ibis -ldal3gen -ldal -lcfitsio ${LAST_LIBS}
+
+${F90_EXEC_2_NAME}:	${F90_EXEC_2_OBJECTS} ${LIB_FULL_NAME}
+			${F90}  ${ALL_F90_CFLAGS} -o ${F90_EXEC_2_NAME} ${F90_EXEC_2_OBJECTS} ${ALL_F90_LDFLAGS} ${F90_EXEC_2_LIBRARIES}
+
+CLEAN_F90_TARGETS	+= ${F90_EXEC_2_NAME}
+ALL_F90_TARGETS		+= ${F90_EXEC_2_NAME}
+# ======================== END OF F90 EXECUTABLE TARGET  ===================
+testcommands::		${LIB_FULL_NAME} ${F90_EXEC_2_NAME} ${F90_EXEC_1_NAME} ${C_EXEC_2_NAME} ${C_EXEC_1_NAME} 
+	(cd unit_test; ./README.test) 

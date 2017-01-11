@@ -1,0 +1,111 @@
+#! /bin/sh
+#
+# DAL3IBIS contains two sample programs, which are built whith the library:
+#
+#   samplec
+#   samplef90
+#
+# to illustrate some DAL3IBIS functionalities. To test these executables,
+# you have to:
+#
+#   - untar the test_data.tar tar file:
+#         tar xvf test_data.tar
+#
+#   - launch the samplec OR samplef90 executable with some arguments, e.g.:
+#         ./samplec 'test_data/og_l2.fits[1]' 0 1 11
+#
+# See DAL3IBIS User's Manual for a description of the meaning of the parameters
+#
+# You can run these test programs by executing this file.
+# It will check for the existence of "samplec" and "samplef90"
+# and prepare the test data .
+# Finally, it prints a summary indicating whether the execution
+# succeeded or not.
+#
+# You can disable the output of the programs to make the testing
+# easier by passing '--quiet' or '-q' as an argument to this script.
+#
+# You can disable execution of the C program or of the F90 program
+# by passing '--c-only' or '-c', or '--f90-only' or '-f' respectively.
+#
+# You can compare the result with the 'sample.result' file
+
+QUIET=0
+RUN_C=1
+RUN_F90=1
+CHECK_RUN_C=0
+CHECK_RUN_F90=0
+
+for par in $* ; do
+   case "$1" in
+      -q | --quiet)
+         QUIET=1
+         shift;;
+      -c | --c-only )
+         RUN_F90=0
+         shift;;
+      -f | --f90-only )
+          RUN_C=0
+         shift;;
+      * )
+         shift;;
+   esac
+done
+
+rm -rf test_data
+tar xf test_data.tar
+
+touch /tmp/dal3ibis_sample.$USER
+if [ $RUN_C -eq 1 ] ; then
+   if [ -x samplec ] ; then
+      if [ $QUIET = 0 ]; then
+         echo RUNNING SAMPLEC
+         echo ===============
+         echo
+         ./samplec 'test_data/og_l2.fits[1]' 0 1 11 | tee /tmp/dal3ibis_sample.$USER
+         echo
+      else
+         ./samplec 'test_data/og_l2.fits[1]' 0 1 11 > /tmp/dal3ibis_sample.$USER
+      fi
+   else
+      echo \'samplec\' is requested, but not found...
+   fi
+fi
+CHECK_RUN_C=`grep -c 'Status' /tmp/dal3ibis_sample.$USER`
+FAILED_C=`grep 'Status' /tmp/dal3ibis_sample.$USER | grep -vcw 0`
+rm -rf /tmp/dal3ibis_sample.$USER
+
+touch /tmp/dal3ibis_sample.$USER
+if [ $RUN_F90 -eq 1 ] ; then
+   if [ -x samplef90 ] ; then
+      if [ $QUIET = 0 ]; then
+         echo RUNNING SAMPLEF90
+         echo =================
+         echo
+         ./samplef90 'test_data/og_l2.fits[1]' 0 1 11 | tee /tmp/dal3ibis_sample.$USER
+         echo
+      else
+         ./samplef90 'test_data/og_l2.fits[1]' 0 1 11 > /tmp/dal3ibis_sample.$USER
+      fi
+   else
+      echo \'samplef90\' is requested, but not found...
+   fi
+fi
+CHECK_RUN_F90=`grep -c 'Status' /tmp/dal3ibis_sample.$USER`
+FAILED_F90=`grep 'Status' /tmp/dal3ibis_sample.$USER | grep -vcw 0`
+rm -rf /tmp/dal3ibis_sample.$USER
+
+if [ $RUN_C = 1 ]; then
+   if [ $FAILED_C -eq 0 -a $CHECK_RUN_C -gt 0 ]; then 
+      echo Execution of \'samplec\': SUCCESSFUL!
+   else
+      echo Execution of \'samplec\': FAILED!
+   fi
+fi
+if [ $RUN_F90 = 1 ]; then
+   if [ $FAILED_F90 -eq 0 -a $CHECK_RUN_F90 -gt 0 ]; then 
+      echo Execution of \'samplef90\': SUCCESSFUL!
+   else
+      echo Execution of \'samplef90\': FAILED!
+   fi
+fi

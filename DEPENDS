@@ -1,0 +1,12 @@
+cfitsio                       latest
+cfortran                      latest
+dal                           latest
+makefiles                     latest
+pil                           latest
+readline                      latest
+ril                           latest
+sla_c                         latest
+common 			      latest
+templates                     latest
+templates_v1                  latest
+dal3gen			      latest

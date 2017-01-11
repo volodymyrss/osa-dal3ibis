@@ -1,0 +1,106 @@
+ ./test_data/ctxt/isgri_context_20010312105300.fits[1] open!
+ ./test_data/nois/isgri_prp_noise_2001-02-22T15:18:52.fits[1] open!
+ ./test_data/list/isgri_switch_list_2001-02-22T15:18:52.fits[1] open!
+Status : 0
+
+ ./test_data/idx/idx_isgri_context.fits[1] open!
+ ./test_data/idx/idx_isgri_prp_noise.fits[1] open!
+ ./test_data/idx/idx_isgri_switch_list.fits[1] open!
+Status : 0
+
+
+ ISGRI CONTEXT - Read 
+Status : 0
+
+Status : 0
+
+Status : 0
+
+ Part of the Low threshold array :
+
+ Z :	-- 0 ---- 1 ---- 2 ---- 3 ---- 4 ---- 5 ---- 6 ---- 7 ---- 8 ---- 9 --
+ 	
+ Y 5:	  15     17      0     11      9      8     15     16      7      4   
+ Y 4:	   9      8     18     16      1      1     19     18      0      2   
+ Y 3:	  16     16     17      0     19      6     14      2     16     15   
+ Y 2:	  12     10     15      7      7     12      9      2     16     20   
+ Y 1:	  10      2     12      2      1     14      9      6      5      5   
+ Y 0:	  14     17      6     18     13      4     17     19      8      0   
+Status : 0
+
+ 
+ ISGRI NOISY PIXELS MAPS - Read one noisy map 
+Status : 0
+
+   Number of noisy Maps : 53
+   Time start 17847975936; time end 19592806400
+   The data are difficult to display.
+      Block  0  -> mce 3
+      Block 17  -> mce 4
+      Block 35  -> mce 6
+      Block 52  -> mce 7
+
+Status : 0
+
+
+ ISGRI NOISY PIXELS MAPS - Read several noisy maps 
+Status : 0
+
+   Number of noisy Maps : 266 
+   Time start 25129287680; time end 19592806400 
+   The data are difficult to display.
+      Block   0  -> mce 4
+      Block  88  -> mce 5
+      Block 177  -> mce 2
+      Block 265  -> mce 7
+Status : 0
+
+
+ ISGRI PIXEL SWITCHES LIST - Read 
+Status : 0
+
+
+   Number of switches : 2408
+   Time start 17646649344; time end 29290037248 
+   Five typical switches :
+      i=00;  Y: 0; Z: 68; flag:1 OFF 
+      i=10;  Y: 17; Z: 60; flag:2 DUBIOUS 
+      i=20;  Y: 65; Z: 76; flag:2 DUBIOUS 
+      i=30;  Y: 124; Z: 120; flag:2 DUBIOUS 
+      i=40;  Y: 1; Z: 120; flag:3 ON->OFF 
+
+Status : 0
+
+ ISGRI PIXEL EFFICIENCY - calculation
+    Test DAL3IBISicaIsgriNoisEff with the limits 19197505440 26730900416
+    Number of changes : 2516
+
+    The number of level in the timeline for the modules are :
+	29	29	29	29	29	29	30	31	228	
+
+0)	3	1	3	2	3	2	2	2	18	
+5)	1	0	1	-1	0	1	-1	0	20	
+10)	-1	-1	0	-2	0	-1	-4	0	17	
+15)	-5	-5	-2	-6	-5	-2	-5	-5	13	
+20)	-7	-6	-5	-6	-5	-2	-6	-4	17	
+25)	-11	-10	-6	-8	-6	-4	-12	-7	7	
+30)	  	  	  	  	  	  	  	-9	0	
+35)	  	  	  	  	  	  	  	  	0	
+40)	  	  	  	  	  	  	  	  	1	
+    The negative values are due to bad test data.
+
+    The % OFF time of the pixels: 
+       pixel[78][5]: 96.436727% OFF 
+       pixel[3][7]: 16.925548% OFF 
+       pixel[42][18]: 97.892422% OFF 
+       pixel[124][56]: 10.689820% OFF 
+       pixel[42][83]: 97.001604% OFF 
+       pixel[124][120]: 18.261776% OFF 
+
+Status : 0
+
+
+ That's all, close the data structures
+
+Status : 0
+
