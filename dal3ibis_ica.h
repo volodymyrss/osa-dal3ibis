@@ -692,6 +692,51 @@ int DAL3IBISGetlowthresholdKev( dal_element *ctxtPtr,
 				OBTime      limTime, 
 				float        *dataBuff, 
 				int          status);
+
+/*****************************************************************************
+
+ Function : DAL3IBISTransformISGRIEnergy
+
+ Description :	
+
+ Parameter argument :                                                      
+    name           type        I/O  description
+   --------------|------------|---|------------------------------------------
+   ctxtPtr	  dal_element*	I     - Pointer to the INDEX of ISGRI context
+   limTime        OBTime        I     - Time at which we want to know the low threshold
+   dataBuff       128*128floats O     - the low Threshold in Kev
+                                        pixel z y is dataBuff[z*ISGRI_SIZE+y]
+   status         int          I/O    - Error code                           
+                             
+
+*****************************************************************************/
+int DAL3IBISTransformISGRIEnergy(dal_element 
+				OBTime      limTime, 
+				float        *dataBuff, 
+				int          status);
+
+/*****************************************************************************
+
+ Function : DAL3IBISGetISGRIEfficiency
+
+ Description :	ISGRI efficiency per pixel and energy
+
+ Parameter argument :                                                      
+    name           type        I/O  description
+   --------------|------------|---|------------------------------------------
+   ctxtPtr	  dal_element*	I     - 
+   limTime        OBTime        I   
+   dataBuff       128*128floats O   
+                                    
+   status         int          I/O  
+                             
+
+*****************************************************************************/
+int DAL3IBISGetISGRIEfficiency(dal_element 
+				OBTime      limTime, 
+				float        *dataBuff, 
+				int          status);
+
 #ifndef __CINT__
 #ifdef __cplusplus
 }
