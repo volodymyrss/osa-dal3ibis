@@ -43,7 +43,7 @@ LIB_SOURCES		= ${LIB_F90_SOURCES}   \
 			  dal3ibis_ica_noisy.c \
 			  dal3ibis_ica_list.c \
 			  dal3ibis_ica_eff.c  \
-			  dal3ibis_ica_energy.c 
+			  dal3ibis_calib.c 
 
 
 _LIB_F90_SOURCES	= ${LIB_F90_EARLY_SOURCES} \
@@ -65,7 +65,7 @@ LIB_OBJECTS		= ${LIB_F90_OBJECTS}   \
 			  dal3ibis_ica_noisy.o \
 			  dal3ibis_ica_list.o  \
 			  dal3ibis_ica_eff.o  \
-			  dal3ibis_ica_energy.o 
+			  dal3ibis_calib.o 
 
 
 _LIB_F90_OBJECTS	= ${LIB_F90_EARLY_OBJECTS} \
@@ -150,6 +150,21 @@ ${C_EXEC_2_NAME}:	${C_EXEC_2_OBJECTS} ${LIB_FULL_NAME}
 
 CLEAN_TARGETS		+= ${C_EXEC_2_NAME}
 ALL_TARGETS		+= ${C_EXEC_2_NAME}
+# ======================== END OF C EXECUTABLE TARGET  ===================
+
+# ========================= C EXECUTABLE TARGET  =========================
+# PLEASE CUT&PASTE INTO makeisdc1.in FROM HERE UP TO END OF TARGET DEFN
+#
+C_EXEC_3_NAME		= samplec_calib 
+C_EXEC_3_SOURCES	= samplec_calib.c
+C_EXEC_3_OBJECTS	= samplec_calib.o
+C_EXEC_3_LIBRARIES	= -ldal3ibis -lISDCroot -ldal3gen -lcommon -lpil -lril -ldal -lcfitsio ${LAST_LIBS}
+
+${C_EXEC_3_NAME}:	${C_EXEC_3_OBJECTS} ${LIB_FULL_NAME}
+			${CC}  ${ALL_C_CFLAGS} -o ${C_EXEC_3_NAME} ${C_EXEC_3_OBJECTS} ${ALL_C_LDFLAGS} ${C_EXEC_3_LIBRARIES}
+
+CLEAN_TARGETS		+= ${C_EXEC_3_NAME}
+ALL_TARGETS		+= ${C_EXEC_3_NAME}
 # ======================== END OF C EXECUTABLE TARGET  ===================
 
 # ========================= F90 EXECUTABLE TARGET  =========================
