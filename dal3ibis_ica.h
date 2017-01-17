@@ -689,53 +689,10 @@ int DAL3IBISicaIsgriNoisEff(DAL_ELEMENTP idxListPtr,
 
 *****************************************************************************/
 
-#define N_MDU 8
-#define N_LT 16
-#define N_ISGRI_PIXEL_Y 128
-#define N_ISGRI_PIXEL_Z 128
-
-typedef struct {
-
-    struct MDU_correction {
-        double offset[N_MDU];
-        double gain[N_MDU];
-        double gain2[N_MDU];
-    };
-
-    struct LUT1 {
-        double ** pha_gain;
-        double ** pha_offset;
-        double ** rt_gain;
-        double ** rt_offset;
-    };
-
-    double ** LUT2;
-
-} ISGRI_energy_calibration_settings;
-
-typedef struct {
-
-    double * MDU_efficiency[N_MDU];
-    double * LT_efficiency[N_LT];
-    double pixel_efficiency[N_ISGRI_PIXEL_Y][N_ISGRI_PIXEL_Y];
-
-} ISGRI_efficiency_settings;
-
 int DAL3IBISGetlowthresholdKev( dal_element *ctxtPtr, 
 				OBTime      limTime, 
 				float        *dataBuff, 
 				int          status);
-
-int DAL3IBISTransformISGRIEnergy(dal_element *ogPtr, 
-				int          status);
-
-int DAL3IBIS_MceIsgriHkCal(dal_element *workGRP,
-        OBTime       obtStart,
-        OBTime       obtEnd,
-        double       meanT[8],
-        double       meanBias[8],
-        int          chatter,
-        int          status);
 
 
 /*int DAL3IBISGetISGRIEfficiency(dal_element 

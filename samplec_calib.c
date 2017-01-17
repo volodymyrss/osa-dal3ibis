@@ -46,6 +46,7 @@
 
 /* DAL3IBIS optional library                                                 */
 #include <dal3ibis.h>
+#include <dal3ibis_calib.h>
 
 
 
@@ -73,11 +74,9 @@ int main(int arg, char *argv[]) {
 
   status=ISDC_OK;
 
+  ////////
   LogFile     fileRef;
   status = RILinit(&fileRef, "", OUT_ALL, "Default");
-
-  status=doICgetNewestDOL("ISGR-EFFI-MOD","",3000,DOL,status);
-  printf("found DOL            : %s\n",DOL);
 
   /* The first argument of the program is the DOL of the group; e.g. :       */
   /* og_l2.fits\[GROUPING\] (backslashes are needed to protect from          */
@@ -101,6 +100,26 @@ int main(int arg, char *argv[]) {
   printf("DALobjectOpen\n");
   status=DALobjectOpen(argv[1],&DAL_DS,status);
   printf("Status: %d\n\n",status);
+  
+  ISGRI_events_struct ISGRI_events;
+  ISGRI_events.obtStart=DAL3_NO_OBTIME;
+  ISGRI_events.obtEnd=DAL3_NO_OBTIME;
+  ISGRI_events.numEvents=0;
+   
+  ISGRI_events.infoEvt.good=0;
+  ISGRI_events.infoEvt.bad_pixel_yz=0;
+  ISGRI_events.infoEvt.rt_too_low=0;
+  ISGRI_events.infoEvt.rt_too_high=0;
+  ISGRI_events.infoEvt.pha_too_low=0;
+  ISGRI_events.infoEvt.pha_too_high=0;
+  ISGRI_events.infoEvt.negative_energy=0;
+  
+  status=DAL3IBIS_read_ISGRI_events(DAL_DS,&ISGRI_events,1,5,status);
+
+  ISGRI_energy_calibration_struct ISGRI_energy_calibration;
+
+  DAL3IBIS_init_ISGRI_energy_calibration(&ISGRI_energy_calibration);
+  status=DAL3IBIS_reconstruct_ISGRI_energies(&ISGRI_energy_calibration,&ISGRI_events,5,status);
 
   /* Getting the total number of events ...                                  */
   /* No selection is made with this function; it really returns every event  */
@@ -118,62 +137,21 @@ int main(int arg, char *argv[]) {
   /* Again, as there is no memory issue here, all event parameters (ALL_PAR) */
   /* are copied into the selected events table                               */
   
-  printf("DAL3IBISselectEvents\n");
-  if (sel>=10) {
-    status=DAL3IBISselectEvents(DAL_DS,evType,ALL_PAR,OBT_num,OBTstart,OBTend,"ISGRI_PHA<100",status);
-  } else {
-    status=DAL3IBISselectEvents(DAL_DS,evType,ALL_PAR,OBT_num,OBTstart,OBTend,NULL,status);
-  }
-  printf("Status: %d\n\n",status);
-
-  /* Getting the number of selected events ...                               */
-  printf("DAL3IBISgetNumEvents\n");
-  status=DAL3IBISgetNumEvents(&num_events,status);
-  printf("Number of Events: %ld\n",num_events);
-  printf("Status: %d\n\n",status);
-
-  printf("Reading all the events at once...\n");
-
-  /* A buffer is allocated for the requested properties. We use the type     */
-  /* OBTime, because we are sure it is large enough to contain any parameter */
-
-  buffer=malloc(sizeof(OBTime)*num_events);
-
-  /* Getting the properties of the selected events ...                       */
-  /* The returned type (type) is set to DAL_LONG. This paremeter is ignored  */
-  /* for the OB_TIME column. Thus the resulting type is translated to        */
-  /* DAL_LONG, unless one reads the OB_TIME column, where OBTime is used     */
-
-  printf("DAL3IBISgetEvents\n");
-  status=DAL3IBISgetEvents(column,&type,buffer,status);
-  printf("Status: %d\n",status);
-
-  /* Printing the result ...                                                 */
-  if (status==ISDC_OK) {
-    if (column==OB_TIME) {
-      for (i=1; i<=num_events; i++) printf("Value %d : %llu\n",i,((OBTime *)buffer)[i-1]);
-    } else {
-      for (i=1; i<=num_events; i++) printf("Value %d : %ld\n",i,((long *)buffer)[i-1]);
-    }
-  }
-  printf("\n");
-
-  /* The intermediate buffer is not needed anymore.                          */
-  free(buffer);
 
   /* Closing the selected events table ...                                   */
   /* This step is not mandatory. It is useful if the application still       */
   /* important ressources once the events have been processed.               */
+  
 
-  printf("DAL3IBIScloseEvents\n");
-  status=DAL3IBIScloseEvents(status);
-  printf("Status: %d\n\n",status);
-    
-  /* Closing the input data structures ...                                   */
-  printf("DALobjectClose\n");
+  status=doICgetNewestDOL("ISGR-EFFI-MOD","",3000,DOL,status);
+  printf("found DOL            : %s\n",DOL);
+  ////////
+  //
+
 
   status=DALobjectClose(DAL_DS,DAL_SAVE,status);
   printf("Status: %d\n",status);
+  
 
   return(ISDC_OK);
 }
