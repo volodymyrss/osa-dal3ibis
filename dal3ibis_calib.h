@@ -12,19 +12,25 @@
 
 #define N_MDU 8
 #define N_LT 16
-#define N_ISGRI_PIXEL_Y 128
-#define N_ISGRI_PIXEL_Z 128
+#define ISGRI_N_PIXEL_Y 128
+#define ISGRI_N_PIXEL_Z 128
 
-#define ISGRI_RT_N_ENER_SCALED 256
-#define ISGRI_RT_N_DATA 256
 
-#define ISGRI_LUT2_MOD_N_RT 256
-#define ISGRI_LUT2_MOD_N_PHA 1024
+#define ISGRI_LUT2_N_RT 256
+#define ISGRI_LUT2_N_PHA 1024
+#define ISGRI_DIM_LUT2 2
+
+#define ISGRI_REVO_N 128
+
+#define ISGRI_LUT1_N_COL 5
+
+# 
 
 // ISGRI detector energy transformation structure
 typedef struct ISGRI_energy_calibration_struct {
 
-    struct MDU_correction_struct {
+    // this read from table and update from temperature and bias
+    struct MDU_correction_struct { 
         double pha_offset[N_MDU];
         double pha_gain[N_MDU];
         double pha_gain2[N_MDU];
@@ -33,16 +39,19 @@ typedef struct ISGRI_energy_calibration_struct {
         double rt_pha_cross_gain[N_MDU];
     } MDU_correction;
 
+    // constant per revolution or always
     struct LUT1_struct {
         double ** pha_gain;
         double ** pha_offset;
         double ** rt_gain;
         double ** rt_offset;
+        int ** pixtype;
     } LUT1;
 
     double ** LUT2;
 
-    struct LUT2_rapid_evolution_struct { // per pointing in principle
+    // in principle per pointing, but interpolated
+    struct LUT2_rapid_evolution_struct { 
         double * ijd;
         double * pha_gain; 
         double * pha_gain2; 
@@ -69,13 +78,16 @@ typedef struct ISGRI_events_struct {
     OBTime     obtStart;
     OBTime     obtEnd;
 
+    double     ijdStart;
+    double     ijdEnd;
+
     DAL3_Word *isgriPha;
     DAL3_Byte *riseTime;
     DAL3_Byte *isgriY;
     DAL3_Byte *isgriZ;
 
-    double *isgri_energy;
-    double *isgri_pi;
+    float *isgri_energy;
+    DAL3_Byte  *isgri_pi;
 
     infoEvt_struct infoEvt;
 } ISGRI_events_struct;
@@ -92,17 +104,13 @@ int DAL3IBISreadLUT2( dal_element *LUT2Structure,
 				ISGRI_energy_calibration_struct *ISGRI_energy_calibration, 
 				int          status );
 
-int DAL3IBISTransformISGRIEnergy(int * ISGRI_PHA,
-                int * ISGRI_RT,
-                ISGRI_energy_calibration_struct *ISGRI_energy_calibration,
-				int          status );
 
 // structure describing efficiency of ISGRI components
 typedef struct {
 
     double * MDU_efficiency[N_MDU]; // energy-dependent
     double * LT_efficiency[N_LT]; // energy-dependent, per LT class
-    double pixel_efficiency[N_ISGRI_PIXEL_Y][N_ISGRI_PIXEL_Y]; // grey, also used to kill pixels
+    double pixel_efficiency[ISGRI_N_PIXEL_Y][ISGRI_N_PIXEL_Z]; // grey, also used to kill pixels
 
 } ISGRI_efficiency_struct;
 

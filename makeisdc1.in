@@ -88,6 +88,7 @@ ALL_TARGETS		+= ${LIB_FULL_NAME}
 TO_INSTALL_BIN		+=
 TO_INSTALL_INC		+= dal3ibis.h
 TO_INSTALL_INC		+= dal3ibis_ica.h
+TO_INSTALL_INC		+= dal3ibis_calib.h
 TO_INSTALL_LIB		+= ${LIB_FULL_NAME}
 TO_INSTALL_HELP		+= ${LIB_SHORT_NAME}.ps
 TO_INSTALL_F90MOD_NORMAL+= dal3ibis_f90_api.${F90MOD_EXT}
@@ -116,7 +117,7 @@ C_EXEC_1_OBJECTS	= samplec.o
 C_EXEC_1_LIBRARIES	= -ldal3ibis -ldal3gen -ldal -lcfitsio ${LAST_LIBS}
 
 ${C_EXEC_1_NAME}:	${C_EXEC_1_OBJECTS} ${LIB_FULL_NAME}
-			${CC}  ${ALL_C_CFLAGS} -o ${C_EXEC_1_NAME} ${C_EXEC_1_OBJECTS} ${ALL_C_LDFLAGS} ${C_EXEC_1_LIBRARIES}
+			${CC}  ${ALL_C_CFLAGS} -o ${C_EXEC_1_NAME} ${C_EXEC_1_OBJECTS} ${ALL_C_LDFLAGS} ${C_EXEC_1_LIBRARIES} -g
 
 CLEAN_TARGETS		+= ${C_EXEC_1_NAME}
 ALL_TARGETS		+= ${C_EXEC_1_NAME}
@@ -143,10 +144,10 @@ ALL_F90_TARGETS		+= ${F90_EXEC_1_NAME}
 C_EXEC_2_NAME		= samplec_ica 
 C_EXEC_2_SOURCES	= samplec_ica.c
 C_EXEC_2_OBJECTS	= samplec_ica.o
-C_EXEC_2_LIBRARIES	= -ldal3ibis -ldal3gen -ldal3hk -lcommon -lpil -lril -ldal -lcfitsio ${LAST_LIBS} 
+C_EXEC_2_LIBRARIES	= -ldal3ibis -ldal3gen -ldal3hk -ldal3aux -lcommon -lpil -lril -ldal -lcfitsio ${LAST_LIBS} 
 
 ${C_EXEC_2_NAME}:	${C_EXEC_2_OBJECTS} ${LIB_FULL_NAME}
-			${CC}  ${ALL_C_CFLAGS} -o ${C_EXEC_2_NAME} ${C_EXEC_2_OBJECTS} ${ALL_C_LDFLAGS} ${C_EXEC_2_LIBRARIES}
+			${CC}  ${ALL_C_CFLAGS} -o ${C_EXEC_2_NAME} ${C_EXEC_2_OBJECTS} ${ALL_C_LDFLAGS} ${C_EXEC_2_LIBRARIES} -g
 
 CLEAN_TARGETS		+= ${C_EXEC_2_NAME}
 ALL_TARGETS		+= ${C_EXEC_2_NAME}
@@ -158,10 +159,10 @@ ALL_TARGETS		+= ${C_EXEC_2_NAME}
 C_EXEC_3_NAME		= samplec_calib 
 C_EXEC_3_SOURCES	= samplec_calib.c
 C_EXEC_3_OBJECTS	= samplec_calib.o
-C_EXEC_3_LIBRARIES	= -ldal3ibis -lISDCroot -ldal3hk -ldal3gen -lcommon -lpil -lril -ldal -lcfitsio ${LAST_LIBS}
+C_EXEC_3_LIBRARIES	= -ldal3ibis -lISDCroot -ldal3hk -ldal3aux -ldal3gen -lcommon -lpil -lril -ldal -lcfitsio ${LAST_LIBS}
 
 ${C_EXEC_3_NAME}:	${C_EXEC_3_OBJECTS} ${LIB_FULL_NAME}
-			${CC}  ${ALL_C_CFLAGS} -o ${C_EXEC_3_NAME} ${C_EXEC_3_OBJECTS} ${ALL_C_LDFLAGS} ${C_EXEC_3_LIBRARIES}
+			${CC}  ${ALL_C_CFLAGS} -o ${C_EXEC_3_NAME} ${C_EXEC_3_OBJECTS} ${ALL_C_LDFLAGS} ${C_EXEC_3_LIBRARIES} -g
 
 CLEAN_TARGETS		+= ${C_EXEC_3_NAME}
 ALL_TARGETS		+= ${C_EXEC_3_NAME}
@@ -173,7 +174,7 @@ ALL_TARGETS		+= ${C_EXEC_3_NAME}
 F90_EXEC_2_NAME		= samplef90_ica
 F90_EXEC_2_SOURCES	= samplef90_ica.f90
 F90_EXEC_2_OBJECTS	= samplef90_ica.o
-F90_EXEC_2_LIBRARIES	= -ldal3ibis -ldal3gen -ldal3hk -ldal -lcfitsio ${LAST_LIBS}
+F90_EXEC_2_LIBRARIES	= -ldal3ibis -ldal3gen -ldal3hk -ldal3aux -ldal -lcfitsio ${LAST_LIBS}
 
 ${F90_EXEC_2_NAME}:	${F90_EXEC_2_OBJECTS} ${LIB_FULL_NAME}
 			${F90}  ${ALL_F90_CFLAGS} -o ${F90_EXEC_2_NAME} ${F90_EXEC_2_OBJECTS} ${ALL_F90_LDFLAGS} ${F90_EXEC_2_LIBRARIES}

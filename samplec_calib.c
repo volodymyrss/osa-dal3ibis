@@ -50,14 +50,14 @@
 
 
 
-int doICgetNewestDOL(char * category,char * filter, double valid_time, char * DOL,int status) {
+/*int doICgetNewestDOL(char * category,char * filter, double valid_time, char * DOL,int status) {
     char ic_group[255];
     snprintf(ic_group,255,"%s/idx/ic/ic_master_file.fits[1]",getenv("CURRENT_IC"));
     status=ICgetNewestDOL(ic_group,
-            "OSA9",
+            "OSA",
             category,filter,valid_time,DOL,status);
     return status;
-}
+}*/
 
 
 int main(int arg, char *argv[]) {
@@ -71,55 +71,43 @@ int main(int arg, char *argv[]) {
   void *buffer;
 
   char DOL[255];
+  int chatter=5;
+
+  LogFile     fileRef;
 
   status=ISDC_OK;
 
-  ////////
-  LogFile     fileRef;
-  status = RILinit(&fileRef, "", OUT_ALL, "Default");
 
-  /* The first argument of the program is the DOL of the group; e.g. :       */
-  /* og_l2.fits\[GROUPING\] (backslashes are needed to protect from          */
-  /* interpretation by the UNIX shell)                                       */
+  status = RILinit(&fileRef, "", OUT_ALL, "Default");
 
   printf("OBJECT            : %s\n",argv[1]);
 
-  /*sscanf(argv[2],"%d",&sel);
-  printf("SELECTION         : %d\n\n",sel);*/
-
-  /* Do we make an OBT selection ?                                           */
-  /* If yes, we use a hard-coded selection, made with 2 OBT ranges           */
-  /* If OBT_num is 0, DAL3IBISselectEvents will ignore the OBT ranges        */ 
   OBT_num=0;
 
-  /* We shall transfer all types into DAL_LONG, as we do not have memory     */
-  /* limitations in this sample program                                      */
   type=DAL_LONG;
+
   
   /* Opening the Group ...                                                   */
   printf("DALobjectOpen\n");
   status=DALobjectOpen(argv[1],&DAL_DS,status);
-  printf("Status: %d\n\n",status);
+  if (status!=ISDC_OK) {
+      RILlogMessage(NULL,Error_1,"status %i",status);
+      return status;
+  };
+  
   
   ISGRI_events_struct ISGRI_events;
-  ISGRI_events.obtStart=DAL3_NO_OBTIME;
-  ISGRI_events.obtEnd=DAL3_NO_OBTIME;
-  ISGRI_events.numEvents=0;
-   
-  ISGRI_events.infoEvt.good=0;
-  ISGRI_events.infoEvt.bad_pixel_yz=0;
-  ISGRI_events.infoEvt.rt_too_low=0;
-  ISGRI_events.infoEvt.rt_too_high=0;
-  ISGRI_events.infoEvt.pha_too_low=0;
-  ISGRI_events.infoEvt.pha_too_high=0;
-  ISGRI_events.infoEvt.negative_energy=0;
-  
-  status=DAL3IBIS_read_ISGRI_events(DAL_DS,&ISGRI_events,1,5,status);
-
   ISGRI_energy_calibration_struct ISGRI_energy_calibration;
 
-  DAL3IBIS_init_ISGRI_energy_calibration(&ISGRI_energy_calibration);
-  status=DAL3IBIS_reconstruct_ISGRI_energies(&ISGRI_energy_calibration,&ISGRI_events,5,status);
+  status=DAL3IBIS_read_ISGRI_events(DAL_DS,&ISGRI_events,1,chatter,status);
+  status=DAL3IBIS_init_ISGRI_energy_calibration(&ISGRI_energy_calibration,status);
+
+  status=DAL3IBIS_populate_newest_LUT1(&ISGRI_events,&ISGRI_energy_calibration,chatter,status);
+  status=DAL3IBIS_correct_LUT1_for_temperature_bias(DAL_DS,&ISGRI_energy_calibration,&ISGRI_events,chatter,status);
+
+  status=DAL3IBIS_populate_newest_LUT2(&ISGRI_events,&ISGRI_energy_calibration,chatter,status);
+
+  status=DAL3IBIS_reconstruct_ISGRI_energies(&ISGRI_energy_calibration,&ISGRI_events,chatter,status);
 
   /* Getting the total number of events ...                                  */
   /* No selection is made with this function; it really returns every event  */
@@ -143,10 +131,8 @@ int main(int arg, char *argv[]) {
   /* important ressources once the events have been processed.               */
   
 
-  status=doICgetNewestDOL("ISGR-EFFI-MOD","",3000,DOL,status);
-  printf("found DOL            : %s\n",DOL);
-  ////////
-  //
+ // status=doICgetNewestDOL("ISGR-EFFI-MOD","",3000,DOL,status);
+ // printf("found IC DOL            : %s\n",DOL);
 
 
   status=DALobjectClose(DAL_DS,DAL_SAVE,status);
