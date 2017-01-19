@@ -485,7 +485,7 @@ inline int DAL3IBIS_reconstruct_ISGRI_energy(
     else if (ipha<0) {ipha=0; ptr_infoEvt->pha_too_low++;}
 
     // only pha interpolation, as before
-    *ptr_isgri_energy=ptr_ISGRI_energy_calibration->LUT2[irt][ipha] \
+    *ptr_isgri_energy=ptr_ISGRI_energy_calibration->LUT2[irt][ipha]; \
             +(ptr_ISGRI_energy_calibration->LUT2[irt][ipha+1]-ptr_ISGRI_energy_calibration->LUT2[irt][ipha])*(pha/2.-(double)ipha);
 
     // invalid LUT2 values
@@ -943,7 +943,7 @@ int DAL3IBIS_read_LUT2(dal_element **ptr_ptr_dal_LUT2, ISGRI_energy_calibration_
                               my_endValues, &type, &my_numValues,
                               (void *)LUT2_tmp, status);
 
-    for (i_rt=0;i_rt<ISGRI_LUT2_N_RT;i_rt++) for (i_pha=0;i_pha<ISGRI_LUT2_N_RT;i_pha++)  {
+    for (i_rt=0;i_rt<ISGRI_LUT2_N_RT;i_rt++) for (i_pha=0;i_pha<ISGRI_LUT2_N_PHA;i_pha++)  {
         ptr_ISGRI_energy_calibration->LUT2[i_rt][i_pha]=LUT2_tmp[i_rt + i_pha*ISGRI_LUT2_N_RT];
     }
 
