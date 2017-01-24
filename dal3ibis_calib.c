@@ -33,6 +33,8 @@
 #define DS_ISGR_RAW       "ISGR-EVTS-ALL"
 #define DS_ISGR_LUT1      "ISGR-OFFS-MOD"
 #define DS_ISGR_LUT2      "ISGR-LUT2-MOD"
+#define DS_ISGR_L2RE      "ISGR-L2RE-MOD"
+#define DS_ISGR_MCEC      "ISGR-MCEC-MOD"
 #define DS_PHG2           "ISGR-GAIN-MOD"
 #define DS_PHO2           "ISGR-OFF2-MOD"
 #define KEY_COL_OUT  "ISGRI_PI"
@@ -43,7 +45,7 @@
 #define KEY_MAX_BIAS       -60.0    /*  155 to disregard RAW 0  */
 #define KEY_MCE_TEMP "I0E_MTEMP2_MMDU"
 #define KEY_DEF_TEMP        -8.0    /* default when HK1 missing */
-#define KEY_RMS_TEMP         1.2    /* disregard MDU Temp */
+#define KEY_RMS_TEMP         1.2    /* disregard MCE Temp */
 #define KEY_MIN_TEMP       -50.5    /* to disregard RAW 0 */
 
 
@@ -101,9 +103,8 @@ void DAL_GC_free_all() {
             free(DAL_GC.allocations[i].ptr);
         } else if (DAL_GC.allocations[i].resource_kind == DAL_GC_DAL_OBJECT_RESOURCE) {
             RILlogMessage(NULL,Log_0,"GC to free resource DAL object: %s",DAL_GC.allocations[i].comment);
-            status=DALobjectClose(((dal_object*)(DAL_GC.allocations[i].ptr)), DAL_SAVE, ISDC_OK);
+            status=DALobjectClose((dal_object)(DAL_GC.allocations[i].ptr), DAL_SAVE, ISDC_OK);
         } else {
-            return -1;
         };
     }
     
@@ -166,12 +167,12 @@ int doICgetNewestDOL(char * category,char * filter, double valid_time, char * DO
 // dealocate and close
 
 static const double DtempH1[8] = {0.43, -0.39, -0.77, 0.84, -0.78, 1.09, -0.08, -0.31};
-double slopeMDU[8]={-1.8,-2.0,-2.3,-2.7,-0.5,-2.4,-0.8,-0.5} ;
+double slopeMCE[8]={-1.8,-2.0,-2.3,-2.7,-0.5,-2.4,-0.8,-0.5} ;
 
 
 // implements temperature and bias dependency additional to the existing LUT1
 // (note that bias is forced to be 1.2, see DAL3IBIS_MceIsgriHkCal)
-// also this slightly interferes with the revolution-scale MDU correction
+// also this slightly interferes with the revolution-scale MCE correction
 int DAL3IBIS_correct_LUT1_for_temperature_bias(
         dal_element *workGRP,
         ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration,
@@ -190,17 +191,17 @@ int DAL3IBIS_correct_LUT1_for_temperature_bias(
     double meanTemp[8], meanBias[8];
     status=DAL3IBIS_MceIsgriHkCal(workGRP,ptr_ISGRI_events->obtStart,ptr_ISGRI_events->obtEnd,meanTemp,meanBias,chatter,status);
 
-    sprintf(logstr_pha_gain,  "Bias-Temperature MDU PHA gain  ");
-    sprintf(logstr_pha_offset,"                 MDU PHA offset");
-    sprintf(logstr_rt_gain,   "                 MDU RT  gain  ");
-    sprintf(logstr_rt_offset, "                 MDU RT  offset");
+    sprintf(logstr_pha_gain,  "Bias-Temperature MCE PHA gain  ");
+    sprintf(logstr_pha_offset,"                 MCE PHA offset");
+    sprintf(logstr_rt_gain,   "                 MCE RT  gain  ");
+    sprintf(logstr_rt_offset, "                 MCE RT  offset");
 
     for (mce=0;mce<8;mce++) {
         sprintf(strchr(logstr_pha_gain, '\0'),
                 " %5.1lf%%",(pow(meanTemp[mce],-1.11)*pow(meanBias[mce],-0.0832)-1)*100);
 
         sprintf(logstr_pha_offset+strlen(logstr_pha_offset),
-                " %5.1lf%%",(pow(meanTemp[mce],slopeMDU[mce])*pow(meanBias[mce],0.0288)-1)*100);
+                " %5.1lf%%",(pow(meanTemp[mce],slopeMCE[mce])*pow(meanBias[mce],0.0288)-1)*100);
 
         sprintf(logstr_rt_gain+strlen(logstr_rt_gain),
                 " %5.1lf%%",(pow(meanTemp[mce],0.518)*pow(meanBias[mce],0.583)-1)*100);
@@ -223,7 +224,7 @@ int DAL3IBIS_correct_LUT1_for_temperature_bias(
             mce     = yz_to_mce(i_y,i_y);
 
             ptr_ISGRI_energy_calibration->LUT1.pha_gain[i_y][i_z]*pow(meanTemp[mce],-1.11)*pow(meanBias[mce],-0.0832);
-            ptr_ISGRI_energy_calibration->LUT1.pha_offset[i_y][i_z]*pow(meanTemp[mce],slopeMDU[mce])*pow(meanBias[mce],0.0288);
+            ptr_ISGRI_energy_calibration->LUT1.pha_offset[i_y][i_z]*pow(meanTemp[mce],slopeMCE[mce])*pow(meanBias[mce],0.0288);
             ptr_ISGRI_energy_calibration->LUT1.rt_gain[i_y][i_z]*pow(meanTemp[mce],0.518)*pow(meanBias[mce],0.583);
             ptr_ISGRI_energy_calibration->LUT1.rt_offset[i_y][i_z]*pow(meanTemp[mce],0.625)*pow(meanBias[mce],0.530);
         }
@@ -291,13 +292,16 @@ int DAL3IBIS_MceIsgriHkCal(dal_element *workGRP,
         meanT[i]   =KEY_DEF_TEMP;
     }
 
-
-    if (status != ISDC_OK) return status;
+    if (status != ISDC_OK) {
+        RILlogMessage(NULL, Log_0, "not ok!");
+        return status;
+    }
     /* SPR 3686: if OBT limits are valid, use S1 PRP OBT limits */
     if (obtStart != DAL3_NO_OBTIME) {
 
         if ( (obtime=(OBTime *)calloc(1, sizeof(OBTime))) == NULL)
             return(DAL3IBIS_ERR_MEMORY);
+
         endTime=obtEnd;
         /* check if OBT are not too close */
         do {
@@ -341,7 +345,10 @@ int DAL3IBIS_MceIsgriHkCal(dal_element *workGRP,
         /* get the information for the requested data */
         status=DAL3HKgetValueInfo(workGRP, hkName, IBIS, DAL3HK_CONVERTED,
                 startTime, endTime,  &nValues, &dataType, status);
-        if (status != ISDC_OK) break;
+        if (status != ISDC_OK) {
+            RILlogMessage(NULL, Error_1, "Cannot get HK value info: %i for %s",status,hkName);
+            break;
+        }
         if (nValues < 1) {
             RILlogMessage(NULL, Warning_1, "%13s has NO valid row.", DS_ISGR_HK);
             status=DAL3IBIS_NO_VALID_HK;
@@ -372,8 +379,7 @@ int DAL3IBIS_MceIsgriHkCal(dal_element *workGRP,
         if (totVal[j] < 1) {
             RILlogMessage(NULL, Warning_1, "Column %19s has NO valid data.", hkName);
             RILlogMessage(NULL, Warning_1, "Continue to next HK data");
-        }
-        else {
+        } else {
             meanT[j]=myMean/totVal[j];
             totMCE++;
         }
@@ -406,7 +412,7 @@ int DAL3IBIS_MceIsgriHkCal(dal_element *workGRP,
             if (totVal[j] > 0) {
                 if (fabs(meanT[j]-myMean-DtempH1[j]) > KEY_RMS_TEMP) {
                     RILlogMessage(NULL, Warning_2,
-                            "REJECTING mean temp. on MDU%d: %+6.2f degC",
+                            "REJECTING mean temp. on MCE%d: %+6.2f degC",
                             j, meanT[j]);
                     totVal[j]=0;
                 }
@@ -526,7 +532,7 @@ int DAL3IBIS_MceIsgriHkCal(dal_element *workGRP,
         meanBias[j]=-meanBias[j]/100. ;
         meanBias[j]=1.2;  // because who cares about the bias
     }
-
+        
     return status;
 }
 
@@ -568,6 +574,8 @@ inline int DAL3IBIS_reconstruct_ISGRI_energy(
 
     rt = rt * ptr_ISGRI_energy_calibration->LUT1.rt_gain[isgriY][isgriZ] + ptr_ISGRI_energy_calibration->LUT1.rt_offset[isgriY][isgriZ];
     pha = isgriPha * ptr_ISGRI_energy_calibration->LUT1.pha_gain[isgriY][isgriZ] + ptr_ISGRI_energy_calibration->LUT1.pha_offset[isgriY][isgriZ];
+
+    // LUT2 rapid here TODO
 
     /// compression to LUT2 index
     irt = round(rt); 
@@ -662,12 +670,12 @@ int DAL3IBIS_init_ISGRI_energy_calibration(ISGRI_energy_calibration_struct *ptr_
     int i_mdu;
 
     for (i_mdu=0; i_mdu<8;i_mdu++) {
-        ptr_ISGRI_energy_calibration->MDU_correction.pha_offset[i_mdu]=0;
-        ptr_ISGRI_energy_calibration->MDU_correction.pha_gain[i_mdu]=0;
-        ptr_ISGRI_energy_calibration->MDU_correction.pha_gain2[i_mdu]=0;
-        ptr_ISGRI_energy_calibration->MDU_correction.rt_offset[i_mdu]=0;
-        ptr_ISGRI_energy_calibration->MDU_correction.rt_gain[i_mdu]=0;
-        ptr_ISGRI_energy_calibration->MDU_correction.rt_pha_cross_gain[i_mdu]=0;
+        ptr_ISGRI_energy_calibration->MCE_correction.pha_offset[i_mdu]=0;
+        ptr_ISGRI_energy_calibration->MCE_correction.pha_gain[i_mdu]=1;
+        ptr_ISGRI_energy_calibration->MCE_correction.pha_gain2[i_mdu]=0;
+        ptr_ISGRI_energy_calibration->MCE_correction.rt_offset[i_mdu]=0;
+        ptr_ISGRI_energy_calibration->MCE_correction.rt_gain[i_mdu]=1;
+        ptr_ISGRI_energy_calibration->MCE_correction.rt_pha_cross_gain[i_mdu]=0;
     } 
 
     status=allocate_2d((void ***)&ptr_ISGRI_energy_calibration->LUT1.pha_gain, 128, 128, sizeof(double),status);
@@ -675,12 +683,6 @@ int DAL3IBIS_init_ISGRI_energy_calibration(ISGRI_energy_calibration_struct *ptr_
     status=allocate_2d((void ***)&ptr_ISGRI_energy_calibration->LUT1.rt_gain, 128, 128, sizeof(double),status);
     status=allocate_2d((void ***)&ptr_ISGRI_energy_calibration->LUT1.rt_offset, 128, 128, sizeof(double),status);
 
-    ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.ijd=NULL;
-    ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.pha_gain=NULL;
-    ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.pha_gain2=NULL;
-    ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.pha_offset=NULL;
-    ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.rt_gain=NULL;
-    ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.rt_offset=NULL;
     status=DAL_GC_allocateDataBuffer((void **)&(ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.ijd), ISGRI_REVO_N*sizeof(double), status,"LUT2 evolution IJD");
     status=DAL_GC_allocateDataBuffer((void **)&(ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.pha_gain), ISGRI_REVO_N*sizeof(double), status,"LUT2 evolution PHA gain");
     status=DAL_GC_allocateDataBuffer((void **)&(ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.pha_gain2), ISGRI_REVO_N*sizeof(double), status,"LUT2 evolution PHA gain2");
@@ -1047,11 +1049,19 @@ int DAL3IBIS_read_LUT2(dal_element **ptr_ptr_dal_LUT2, ISGRI_energy_calibration_
 
 int DAL3IBIS_populate_newest_LUT2_rapid_evolution(ISGRI_events_struct *ptr_ISGRI_events, ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration, int chatter, int status) {
     char dol_L2RE[DAL_MAX_STRING];
+    
+    if (chatter > 3) RILlogMessage(NULL, Log_0, "ISGRI rise-time LUT2 rapid evolution reading...");
 
     status=doICgetNewestDOL("ISGR-L2RE-MOD","",ptr_ISGRI_events->ijdStart,dol_L2RE,status);
+    
+    if (status != ISDC_OK) {
+        RILlogMessage(NULL,Error_1,"did not find ISGR-L2RE-MOD");
+        return status;
+    }
     RILlogMessage(NULL,Log_0,"Found ISGR-L2RE-MOD as %s",dol_L2RE);
 
     status=DAL3IBIS_populate_L2RE(dol_L2RE, ptr_ISGRI_energy_calibration, chatter, status);
+
     return status;
 }
 
@@ -1079,7 +1089,7 @@ int DAL3IBIS_open_L2RE(char *dol_L2RE, dal_element **ptr_dal_L2RE, int chatter, 
     }
     if (strcmp(keyVal, DS_ISGR_L2RE)) {
       RILlogMessage(NULL, Error_2, "File (%s) should be a %13s not %s",
-                                  dol_LUT2, DS_ISGR_L2RE, keyVal);
+                                  dol_L2RE, DS_ISGR_L2RE, keyVal);
       return status=I_ISGR_ERR_BAD_INPUT;
     }
 
@@ -1108,25 +1118,139 @@ int DAL3IBIS_open_L2RE(char *dol_L2RE, dal_element **ptr_dal_L2RE, int chatter, 
 
 int DAL3IBIS_read_L2RE(dal_element **ptr_ptr_dal_L2RE, ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration, int chatter, int status) {
     dal_dataType type;
-    long int my_numValues;
-    long int my_startValues[2]={1,1},
-        my_endValues[2]={ISGRI_L2RE_N_RT,ISGRI_L2RE_N_PHA};
 
-    if (chatter > 3) RILlogMessage(NULL, Log_0, "ISGRI rise-time LUT2 reading...");
+    if (chatter > 3) RILlogMessage(NULL, Log_0, "ISGRI L2RE reading...");
 
-    status=DAL_GC_allocateDataBuffer((void **)&ptr_ISGRI_energy_calibration->LUT2, ISGRI_LUT2_N_RT*ISGRI_LUT2_N_PHA*sizeof(double), status, "LUT2");
-    if (status != ISDC_OK) 
-        return status;
-
+    DALtableGetNumRows(*ptr_ptr_dal_L2RE,&ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.n_entries,status);
+    // check if too much
+    
+    if (chatter > 3) RILlogMessage(NULL, Log_0, "ISGRI L2RE rows: %i",ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.n_entries);
+    
     type=DAL_DOUBLE;
-    status=DALarrayGetSection(*ptr_ptr_dal_LUT2, ISGRI_DIM_LUT2, my_startValues,
-                              my_endValues, &type, &my_numValues,
-                              (void *)ptr_ISGRI_energy_calibration->LUT2, status);
-
-    if (status != ISDC_OK) {
-      RILlogMessage(NULL, Error_2, "Cannot read LUT2 array. Status=%d", status);
-      return status;
+    status=DALtableGetCol(*ptr_ptr_dal_L2RE, NULL, 1, &type, NULL,
+                            (void *)(ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.ijd), status);
+    status=DALtableGetCol(*ptr_ptr_dal_L2RE, NULL, 2, &type, NULL,
+                            (void *)(ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.pha_offset), status);
+    status=DALtableGetCol(*ptr_ptr_dal_L2RE, NULL, 3, &type, NULL,
+                            (void *)(ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.pha_gain), status);
+    status=DALtableGetCol(*ptr_ptr_dal_L2RE, NULL, 4, &type, NULL,
+                            (void *)(ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.pha_gain2), status);
+    status=DALtableGetCol(*ptr_ptr_dal_L2RE, NULL, 5, &type, NULL,
+                            (void *)(ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.rt_offset), status);
+    status=DALtableGetCol(*ptr_ptr_dal_L2RE, NULL, 6, &type, NULL,
+                            (void *)(ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.rt_gain), status);
+    
+    double minijd=-1;
+    double maxijd=-1;
+    if (chatter > 3) {
+        int i;
+        for (i=0; i<ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.n_entries; i++) {
+            double ijd=ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.ijd[i];
+            if (minijd<0 || ijd < minijd) minijd=ijd;
+            if (maxijd<0 || ijd > maxijd) maxijd=ijd;
+        }
     }
+    RILlogMessage(NULL, Log_0, "ISGRI L2RE IJD range: %.5lg - %.5lg",minijd,maxijd);
 
     return status;
 }
+    
+////////////////////////
+
+int DAL3IBIS_populate_newest_MCEC(ISGRI_events_struct *ptr_ISGRI_events, ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration, int chatter, int status) {
+    char dol_MCEC[DAL_MAX_STRING];
+    
+    if (chatter > 3) RILlogMessage(NULL, Log_0, "ISGRI rise-time MCE evolution reading...");
+
+    status=doICgetNewestDOL("ISGR-MCEC-MOD","",ptr_ISGRI_events->ijdStart,dol_MCEC,status);
+    
+    if (status != ISDC_OK) {
+        RILlogMessage(NULL,Error_1,"did not find ISGR-MCEC-MOD");
+        return status;
+    }
+    RILlogMessage(NULL,Log_0,"Found ISGR-MCEC-MOD as %s",dol_MCEC);
+
+    status=DAL3IBIS_populate_MCEC(dol_MCEC, ptr_ISGRI_energy_calibration, chatter, status);
+
+    return status;
+}
+
+int DAL3IBIS_populate_MCEC(char *dol_MCEC, ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration, int chatter, int status) {
+    dal_element *ptr_dal_MCEC;
+    status=DAL3IBIS_open_MCEC(dol_MCEC,&ptr_dal_MCEC,chatter,status);
+    status=DAL3IBIS_read_MCEC(&ptr_dal_MCEC,ptr_ISGRI_energy_calibration,chatter,status);
+    return status;
+}
+
+int DAL3IBIS_open_MCEC(char *dol_MCEC, dal_element **ptr_dal_MCEC, int chatter, int status) { // these are identical!!!
+
+    char keyVal[DAL_MAX_STRING];
+    int numRow, numCol, numAxes;
+    long int dimAxes[2];  
+    dal_dataType type;
+
+    status=DAL_GC_objectOpen(dol_MCEC, ptr_dal_MCEC, status);
+    status=DALelementGetName(*ptr_dal_MCEC, keyVal, status);
+
+    if (status != ISDC_OK) {
+      RILlogMessage(NULL, Error_2, "%13s LUT2 rapid evolution cannot be opened. Status=%d",
+                                  DS_ISGR_MCEC, status);
+      return status=I_ISGR_ERR_BAD_INPUT; // file not found!
+    }
+    if (strcmp(keyVal, DS_ISGR_MCEC)) {
+      RILlogMessage(NULL, Error_2, "File (%s) should be a %13s not %s",
+                                  dol_MCEC, DS_ISGR_MCEC, keyVal);
+      return status=I_ISGR_ERR_BAD_INPUT;
+    }
+
+    /*
+    status=DALarrayGetStruct(*ptr_dal_LUT2, &type, &numAxes, dimAxes, status);
+    if (status != ISDC_OK) {
+      RILlogMessage(NULL, Error_2, "Cannot get the 2 sizes of array %13s. Status=%d",
+                                  DS_ISGR_LUT2, status);
+      return status=I_ISGR_ERR_ISGR_RISE_BAD;
+    }
+
+    if (numAxes != ISGRI_DIM_LUT2) {
+      RILlogMessage(NULL, Error_2, "%13s image must be a 2D array.", DS_ISGR_LUT2);
+      return status=I_ISGR_ERR_ISGR_RISE_BAD;
+    }
+
+    if (  (dimAxes[0]!=ISGRI_LUT2_N_RT) || (dimAxes[1]!=ISGRI_LUT2_N_PHA)) {
+      RILlogMessage(NULL, Error_2, "%13s array dimensions must be: %d*%d not %d*%d",
+                                  DS_ISGR_LUT2, ISGRI_LUT2_N_RT, ISGRI_LUT2_N_PHA, dimAxes[0], dimAxes[1]);
+      status=I_ISGR_ERR_ISGR_RISE_BAD;
+      return status;
+    }*/
+
+    return status;
+}
+
+int DAL3IBIS_read_MCEC(dal_element **ptr_ptr_dal_MCEC, ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration, int chatter, int status) {
+    dal_dataType type;
+
+    if (chatter > 3) RILlogMessage(NULL, Log_0, "ISGRI MCEC reading...");
+
+    long int numRows;
+    DALtableGetNumRows(*ptr_ptr_dal_MCEC,&numRows,status);
+    // check if too much
+    
+    if ( numRows != 8 ) {
+        return -1;
+    }
+    
+    type=DAL_DOUBLE;
+    status=DALtableGetCol(*ptr_ptr_dal_MCEC, NULL, 2, &type, NULL,
+                            (void *)(ptr_ISGRI_energy_calibration->MCE_correction.pha_offset), status);
+    status=DALtableGetCol(*ptr_ptr_dal_MCEC, NULL, 3, &type, NULL,
+                            (void *)(ptr_ISGRI_energy_calibration->MCE_correction.pha_gain), status);
+    status=DALtableGetCol(*ptr_ptr_dal_MCEC, NULL, 4, &type, NULL,
+                            (void *)(ptr_ISGRI_energy_calibration->MCE_correction.pha_gain2), status);
+    status=DALtableGetCol(*ptr_ptr_dal_MCEC, NULL, 5, &type, NULL,
+                            (void *)(ptr_ISGRI_energy_calibration->MCE_correction.rt_offset), status);
+    status=DALtableGetCol(*ptr_ptr_dal_MCEC, NULL, 6, &type, NULL,
+                            (void *)(ptr_ISGRI_energy_calibration->MCE_correction.rt_gain), status);
+    
+    return status;
+}
+    

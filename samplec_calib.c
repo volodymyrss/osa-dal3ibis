@@ -61,7 +61,7 @@
 
 #define TRY_BLOCK_BEGIN  do { 
 #define TRY_BLOCK_END } while(0);
-#define TRY(call,fail_status,...) if ( status=call != ISDC_OK ) { status=fail_status; RILlogMessage(NULL,Error_1,##__VA_ARGS__); break;}
+#define TRY(call,fail_status,...) if ( status=call != ISDC_OK ) { RILlogMessage(NULL,Error_1,"error in the call: %i",status); status=fail_status; RILlogMessage(NULL,Error_1,##__VA_ARGS__); break;}
 
 int main(int arg, char *argv[]) {
 
@@ -99,16 +99,13 @@ int main(int arg, char *argv[]) {
 
       TRY( DAL3IBIS_populate_newest_LUT1(&ISGRI_events,&ISGRI_energy_calibration,chatter,status), status, "loading LUT1" );
       TRY( DAL3IBIS_correct_LUT1_for_temperature_bias(DAL_DS,&ISGRI_energy_calibration,&ISGRI_events,chatter,status), status, "correcting for LUT1 temperature bias");
-
-      TRY( DAL3IBIS_populate_newest_LUT2(&ISGRI_events,&ISGRI_energy_calibration,chatter,status), status, "loading LUT2" );
       
-      TRY( DAL3IBIS_populate_newest_LUT2_rapid_evolution(&ISGRI_events,&ISGRI_energy_calibration,chatter,status), status, "loading LUT2" );
+      TRY( DAL3IBIS_populate_newest_MCEC(&ISGRI_events,&ISGRI_energy_calibration,chatter,status), status, "loading MCE evolution correction");
+      TRY( DAL3IBIS_populate_newest_LUT2(&ISGRI_events,&ISGRI_energy_calibration,chatter,status), status, "loading LUT2" );
+      TRY( DAL3IBIS_populate_newest_LUT2_rapid_evolution(&ISGRI_events,&ISGRI_energy_calibration,chatter,status), status, "loading LUT2 rapid evolution" );
 
       TRY( DAL3IBIS_reconstruct_ISGRI_energies(&ISGRI_energy_calibration,&ISGRI_events,chatter,status), status, "reconstructing energies");
 
-      /* Getting the total number of events ...                                  */
-      /* No selection is made with this function; it really returns every event  */
-      /* that i spresent in the group.                                           */
       printf("DAL3IBISshowAllEvents\n");
       status=DAL3IBISshowAllEvents(DAL_DS,ib_ev,status);
       printf("ISGRI Events            : %ld\n",ib_ev[ISGRI_EVTS]);
