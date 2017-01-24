@@ -413,6 +413,11 @@ int DAL3IBISfindGapsOBT(DAL_ELEMENTP InputDS,
     and ends of the continuous "plages"
   */
 
+#define DAL_GC_MAX_ALLOCATIONS 100
+#define DAL_GC_RESOURCE_KIND char
+#define DAL_GC_MEMORY_RESOURCE 0
+#define DAL_GC_DAL_OBJECT_RESOURCE 1
+
 #ifndef __CINT__
 #ifdef __cplusplus
 }

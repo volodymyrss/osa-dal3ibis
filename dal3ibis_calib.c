@@ -55,6 +55,104 @@
 #define I_ISGR_ERR_IBIS_IREM_BAD  -122055
 #define I_ISGR_ERR_ISGR_PHGO2_BAD -122056
 
+
+// to memtools
+//
+
+
+
+typedef struct DAL_GC_allocation_struct {
+    char comment[DAL_MAX_STRING];
+    void *ptr;
+    DAL_GC_RESOURCE_KIND resource_kind;
+} DAL_GC_allocation_struct;
+
+
+static struct DAL_GC_struct {
+    int n_entries;
+    DAL_GC_allocation_struct allocations[DAL_GC_MAX_ALLOCATIONS];
+} DAL_GC;
+
+void DAL_GC_register_allocation(void *ptr, DAL_GC_RESOURCE_KIND resource_kind, char *comment) {
+    DAL_GC.allocations[DAL_GC.n_entries].ptr=ptr;
+    DAL_GC.allocations[DAL_GC.n_entries].resource_kind=resource_kind;
+    strncpy(DAL_GC.allocations[DAL_GC.n_entries].comment,comment,DAL_MAX_STRING);
+    DAL_GC.n_entries++;
+}
+
+void DAL_GC_print() {
+    int i;
+
+    for (i=0;i<DAL_GC.n_entries;i++) {
+        if (DAL_GC.allocations[i].resource_kind == DAL_GC_MEMORY_RESOURCE) {
+            RILlogMessage(NULL,Log_0,"GC resource memory: %s",DAL_GC.allocations[i].comment);
+        } else if (DAL_GC.allocations[i].resource_kind == DAL_GC_MEMORY_RESOURCE) {
+            RILlogMessage(NULL,Log_0,"GC resource DAL object: %s",DAL_GC.allocations[i].comment);
+        }
+    }
+}
+
+void DAL_GC_free_all() {
+    int i,status;
+
+    for (i=DAL_GC.n_entries-1;i>=0;i--) {
+        if (DAL_GC.allocations[i].resource_kind == DAL_GC_MEMORY_RESOURCE) {
+            RILlogMessage(NULL,Log_0,"GC to free resource memory: %s",DAL_GC.allocations[i].comment);
+            free(DAL_GC.allocations[i].ptr);
+        } else if (DAL_GC.allocations[i].resource_kind == DAL_GC_DAL_OBJECT_RESOURCE) {
+            RILlogMessage(NULL,Log_0,"GC to free resource DAL object: %s",DAL_GC.allocations[i].comment);
+            status=DALobjectClose(((dal_object*)(DAL_GC.allocations[i].ptr)), DAL_SAVE, ISDC_OK);
+        } else {
+            return -1;
+        };
+    }
+    
+}
+
+int DAL_GC_allocateDataBuffer(void **buffer, 
+                              long buffSize, 
+                              int status,
+                              char *comment)
+{
+    *buffer=NULL;
+    status=DALallocateDataBuffer(buffer, 
+                                 buffSize, 
+                                 status);
+    DAL_GC_register_allocation(*buffer, DAL_GC_MEMORY_RESOURCE, comment);
+    return status;
+}
+
+int DAL_GC_freeDataBuffer(void *buffer,
+                      int   status)
+{
+    int i;
+    int found=0;
+
+    status=DALfreeDataBuffer(buffer,status);
+
+    for (i=0;i<DAL_GC.n_entries;i++) {
+        if (DAL_GC.allocations[i].ptr == buffer) found=1;
+        if ( (found==1) && (i<DAL_GC.n_entries-1) )
+            DAL_GC.allocations[i]=DAL_GC.allocations[i+1];
+    }
+    if ( found==1 ) 
+        DAL_GC.n_entries--;
+
+    return status;
+}
+
+
+int DAL_GC_objectOpen(const char   *DOL,    /* I DOL of object to open          */
+        dal_object   *object, /* O DAL element pointer            */
+        int           status) {
+    status=DALobjectOpen(DOL,object,status);
+    DAL_GC_register_allocation((void*)object, DAL_GC_DAL_OBJECT_RESOURCE,(char *)DOL);
+
+    return status;
+}
+
+
+
 /// this is not right!
 int doICgetNewestDOL(char * category,char * filter, double valid_time, char * DOL,int status) {
     char ic_group[DAL_MAX_STRING];
@@ -165,21 +263,21 @@ int DAL3IBIS_MceIsgriHkCal(dal_element *workGRP,
                          int          chatter,
                          int          status)
 {
-  RILlogMessage(NULL, Log_0, "reading MCE HK in DAL3IBIS");
-  int     j, totMCE;
-  char    hkName[20], num[3];
-  long    i, nValues,
-          totVal[8];
-  dal_element * isgrHK1_Ptr;
+    RILlogMessage(NULL, Log_0, "reading MCE HK in DAL3IBIS");
+    int     j, totMCE;
+    char    hkName[20], num[3];
+    long    i, nValues,
+            totVal[8];
+    dal_element * isgrHK1_Ptr;
 
-  char logString[DAL_BIG_STRING];
-  char tmp_string[DAL_BIG_STRING];
-  double  myMean, myTot,
-         *hkBuff=NULL;
-  OBTime *obtime,
-          startTime=DAL3_NO_OBTIME,
-          endTime = DAL3_NO_OBTIME;
-  dal_dataType dataType;
+    char logString[DAL_BIG_STRING];
+    char tmp_string[DAL_BIG_STRING];
+    double  myMean, myTot,
+            *hkBuff=NULL;
+    OBTime *obtime,
+           startTime=DAL3_NO_OBTIME,
+           endTime = DAL3_NO_OBTIME;
+    dal_dataType dataType;
 
     status=DALobjectFindElement(workGRP, DS_ISGR_HK, &isgrHK1_Ptr, status);
     if (status != ISDC_OK)
@@ -194,233 +292,233 @@ int DAL3IBIS_MceIsgriHkCal(dal_element *workGRP,
     }
 
 
-  if (status != ISDC_OK) return status;
-  /* SPR 3686: if OBT limits are valid, use S1 PRP OBT limits */
-  if (obtStart != DAL3_NO_OBTIME) {
+    if (status != ISDC_OK) return status;
+    /* SPR 3686: if OBT limits are valid, use S1 PRP OBT limits */
+    if (obtStart != DAL3_NO_OBTIME) {
 
-    if ( (obtime=(OBTime *)calloc(1, sizeof(OBTime))) == NULL)
-      return(DAL3IBIS_ERR_MEMORY);
-    endTime=obtEnd;
-    /* check if OBT are not too close */
-  do {
-    status=DAL3GENelapsedOBT(obtEnd, obtStart, &startTime, status);
+        if ( (obtime=(OBTime *)calloc(1, sizeof(OBTime))) == NULL)
+            return(DAL3IBIS_ERR_MEMORY);
+        endTime=obtEnd;
+        /* check if OBT are not too close */
+        do {
+            status=DAL3GENelapsedOBT(obtEnd, obtStart, &startTime, status);
+            if (status != ISDC_OK) {
+                RILlogMessage(NULL, Warning_1, "Error calculating elapsed OBT");
+                RILlogMessage(NULL, Warning_1, "Reverting from status=%d to ISDC_OK",
+                        status);
+                status=ISDC_OK;
+                break;
+            }
+            *obtime=(DAL3_OBT_SECOND) * (SEC_DELTA_MIN);
+            if (startTime < *obtime) {
+
+                RILlogMessage(NULL, Warning_1, "Last OBT (%020lld) too close from first OBT (%020lld)",
+                        obtEnd, obtStart);
+                status=DAL3GENskipOBT(obtStart, *obtime, &startTime, status);
+                if (status != ISDC_OK) {
+                    RILlogMessage(NULL, Warning_1, "Error adding %d seconds to first OBT", SEC_DELTA_MIN);
+                    RILlogMessage(NULL, Warning_1, "Reverting from status=%d to ISDC_OK",
+                            status);
+                    status=ISDC_OK;
+                    break;
+                }
+                endTime=startTime;
+                RILlogMessage(NULL, Warning_1, "Adding %d seconds to first OBT, last OBT = %020lld",
+                        SEC_DELTA_MIN, endTime);
+            }
+        } while (0);
+        free(obtime);
+        startTime=obtStart;
+
+    }
+    obtime=NULL;
+    totMCE=0;
+    for (j=0; j<8; j++) {
+
+        strcpy(hkName, KEY_MCE_TEMP);
+        sprintf(num, "%d", j);
+        strcat(hkName, num);
+        /* get the information for the requested data */
+        status=DAL3HKgetValueInfo(workGRP, hkName, IBIS, DAL3HK_CONVERTED,
+                startTime, endTime,  &nValues, &dataType, status);
+        if (status != ISDC_OK) break;
+        if (nValues < 1) {
+            RILlogMessage(NULL, Warning_1, "%13s has NO valid row.", DS_ISGR_HK);
+            status=DAL3IBIS_NO_VALID_HK;
+            break;
+        }
+        /* now allocate the required memory and get the data values */
+        if (status != ISDC_OK) {
+            RILlogMessage(NULL, Error_1, "Cannot allocate buffers for HK data: %s",
+                    hkName);
+            break;
+        }
+        /* retrieve the housekeeping data from the fits file */
+        dataType=DAL_DOUBLE;
+        status=DALallocateDataBuffer((void **)&hkBuff, nValues*sizeof(double), status);
+        status=DALallocateDataBuffer((void **)&obtime, nValues*sizeof(OBTime), status);
+        status=DAL3HKgetValues(workGRP, hkName, IBIS, DAL3HK_CONVERTED,
+                startTime, endTime, obtime, hkBuff, dataType, status);
+        if (status != ISDC_OK) {
+            RILlogMessage(NULL, Error_1, "Cannot get buffers for HK data: %s",
+                    hkName);
+            break;
+        }
+        totVal[j]=0;
+        myMean=0.0;
+        for (i=0; i<nValues; i++) {
+            if (hkBuff[i]  >  KEY_MIN_TEMP) { myMean+=hkBuff[i]; totVal[j]++; }
+        }
+        if (totVal[j] < 1) {
+            RILlogMessage(NULL, Warning_1, "Column %19s has NO valid data.", hkName);
+            RILlogMessage(NULL, Warning_1, "Continue to next HK data");
+        }
+        else {
+            meanT[j]=myMean/totVal[j];
+            totMCE++;
+        }
+
+    }
     if (status != ISDC_OK) {
-      RILlogMessage(NULL, Warning_1, "Error calculating elapsed OBT");
-      RILlogMessage(NULL, Warning_1, "Reverting from status=%d to ISDC_OK",
-                                    status);
-      status=ISDC_OK;
-      break;
+        /* big problem: don't even try to get next HK data */
+        DAL3HKfreeData(status);
+        if (hkBuff != NULL) DAL_GC_freeDataBuffer((void *)hkBuff, ISDC_OK);
+        if (obtime != NULL) DAL_GC_freeDataBuffer((void *)obtime, ISDC_OK);
+        return status;
     }
-    *obtime=(DAL3_OBT_SECOND) * (SEC_DELTA_MIN);
-    if (startTime < *obtime) {
-
-      RILlogMessage(NULL, Warning_1, "Last OBT (%020lld) too close from first OBT (%020lld)",
-                                    obtEnd, obtStart);
-      status=DAL3GENskipOBT(obtStart, *obtime, &startTime, status);
-      if (status != ISDC_OK) {
-        RILlogMessage(NULL, Warning_1, "Error adding %d seconds to first OBT", SEC_DELTA_MIN);
-        RILlogMessage(NULL, Warning_1, "Reverting from status=%d to ISDC_OK",
-                                      status);
-        status=ISDC_OK;
-        break;
-      }
-      endTime=startTime;
-      RILlogMessage(NULL, Warning_1, "Adding %d seconds to first OBT, last OBT = %020lld",
-                                    SEC_DELTA_MIN, endTime);
-    }
-  } while (0);
-    free(obtime);
-    startTime=obtStart;
-
-  }
-  obtime=NULL;
-  totMCE=0;
-  for (j=0; j<8; j++) {
-
-    strcpy(hkName, KEY_MCE_TEMP);
-    sprintf(num, "%d", j);
-    strcat(hkName, num);
-    /* get the information for the requested data */
-    status=DAL3HKgetValueInfo(workGRP, hkName, IBIS, DAL3HK_CONVERTED,
-                              startTime, endTime,  &nValues, &dataType, status);
-    if (status != ISDC_OK) break;
-    if (nValues < 1) {
-      RILlogMessage(NULL, Warning_1, "%13s has NO valid row.", DS_ISGR_HK);
-      status=DAL3IBIS_NO_VALID_HK;
-      break;
-    }
-    /* now allocate the required memory and get the data values */
-    status=DALallocateDataBuffer((void **)&hkBuff, nValues*sizeof(double), status);
-    status=DALallocateDataBuffer((void **)&obtime, nValues*sizeof(OBTime), status);
-    if (status != ISDC_OK) {
-      RILlogMessage(NULL, Error_1, "Cannot allocate buffers for HK data: %s",
-                                    hkName);
-      break;
-    }
-    /* retrieve the housekeeping data from the fits file */
-    dataType=DAL_DOUBLE;
-    status=DAL3HKgetValues(workGRP, hkName, IBIS, DAL3HK_CONVERTED,
-                           startTime, endTime, obtime, hkBuff, dataType, status);
-    if (status != ISDC_OK) {
-      RILlogMessage(NULL, Error_1, "Cannot get buffers for HK data: %s",
-                                    hkName);
-      break;
-    }
-    totVal[j]=0;
-    myMean=0.0;
-    for (i=0; i<nValues; i++) {
-      if (hkBuff[i]  >  KEY_MIN_TEMP) { myMean+=hkBuff[i]; totVal[j]++; }
-    }
-    if (totVal[j] < 1) {
-      RILlogMessage(NULL, Warning_1, "Column %19s has NO valid data.", hkName);
-      RILlogMessage(NULL, Warning_1, "Continue to next HK data");
+    if (totMCE == 0) {
+        myMean=KEY_DEF_TEMP;
+        RILlogMessage(NULL, Warning_1, "Using default ISGRI mean temperature: %+6.2f degC",
+                myMean);
     }
     else {
-      meanT[j]=myMean/totVal[j];
-      totMCE++;
-    }
-
-  }
-  if (status != ISDC_OK) {
-    /* big problem: don't even try to get next HK data */
-    DAL3HKfreeData(status);
-    if (hkBuff != NULL) DALfreeDataBuffer((void *)hkBuff, ISDC_OK);
-    if (obtime != NULL) DALfreeDataBuffer((void *)obtime, ISDC_OK);
-    return status;
-  }
-  if (totMCE == 0) {
-    myMean=KEY_DEF_TEMP;
-    RILlogMessage(NULL, Warning_1, "Using default ISGRI mean temperature: %+6.2f degC",
-                                  myMean);
-  }
-  else {
-    myMean=0.0; myTot=0.0;
-    for (j=0; j<8; j++)
-      if (totVal[j] > 0) { myMean+=meanT[j]; myTot+=totVal[j]; }
-    myMean/=totMCE;
-    if (chatter > 1)
-      RILlogMessage(NULL, Log_1, "Mean temp. (%05.1f values) on %d MCEs: %+6.2f degC",
-                                myTot/totMCE, totMCE, myMean);
-    /* Check probe is OK, otherwise re-computes the mean with valid values */
-    i=totMCE;
-    totMCE=0;
-    for (j=0; j<8; j++)
-      if (totVal[j] > 0) {
-        if (fabs(meanT[j]-myMean-DtempH1[j]) > KEY_RMS_TEMP) {
-          RILlogMessage(NULL, Warning_2,
-                             "REJECTING mean temp. on MDU%d: %+6.2f degC",
-                             j, meanT[j]);
-          totVal[j]=0;
-        }
-        else totMCE++;
-      }
-    if (i != totMCE) {
-      if (totMCE == 0) {
-/*        myMean=KEY_DEF_TEMP; keep previous calculation SPR 4838*/
-        RILlogMessage(NULL, Warning_2,
-                           "NO new mean temp., CHANGE DtempH1 array");
-      }
-      else {
         myMean=0.0; myTot=0.0;
         for (j=0; j<8; j++)
-          if (totVal[j] > 0) { myMean+=meanT[j]; myTot+=totVal[j]; }
+            if (totVal[j] > 0) { myMean+=meanT[j]; myTot+=totVal[j]; }
         myMean/=totMCE;
         if (chatter > 1)
-          RILlogMessage(NULL, Log_1, "NEW  mean  (%05.1f values) on %d MCEs: %+6.2f degC",
-                                    myTot/totMCE, totMCE, myMean);
-      }
+            RILlogMessage(NULL, Log_1, "Mean temp. (%05.1f values) on %d MCEs: %+6.2f degC",
+                    myTot/totMCE, totMCE, myMean);
+        /* Check probe is OK, otherwise re-computes the mean with valid values */
+        i=totMCE;
+        totMCE=0;
+        for (j=0; j<8; j++)
+            if (totVal[j] > 0) {
+                if (fabs(meanT[j]-myMean-DtempH1[j]) > KEY_RMS_TEMP) {
+                    RILlogMessage(NULL, Warning_2,
+                            "REJECTING mean temp. on MDU%d: %+6.2f degC",
+                            j, meanT[j]);
+                    totVal[j]=0;
+                }
+                else totMCE++;
+            }
+        if (i != totMCE) {
+            if (totMCE == 0) {
+                /*        myMean=KEY_DEF_TEMP; keep previous calculation SPR 4838*/
+                RILlogMessage(NULL, Warning_2,
+                        "NO new mean temp., CHANGE DtempH1 array");
+            }
+            else {
+                myMean=0.0; myTot=0.0;
+                for (j=0; j<8; j++)
+                    if (totVal[j] > 0) { myMean+=meanT[j]; myTot+=totVal[j]; }
+                myMean/=totMCE;
+                if (chatter > 1)
+                    RILlogMessage(NULL, Log_1, "NEW  mean  (%05.1f values) on %d MCEs: %+6.2f degC",
+                            myTot/totMCE, totMCE, myMean);
+            }
+        }
     }
-  }
 
-if (chatter > 3) {
-  totMCE=0;
-  for (j=0; j<8; j++) {
+    if (chatter > 3) {
+        totMCE=0;
+        for (j=0; j<8; j++) {
 
-    strcpy(hkName, KEY_MCE_BIAS);
-    sprintf(num, "%d", j);
-    strcat(hkName, num);
-    /* get the information for the requested data */
-    status=DAL3HKgetValueInfo(workGRP, hkName, IBIS, DAL3HK_CONVERTED,
-                              startTime, endTime,  &nValues, &dataType, status);
-    if (status != ISDC_OK) break;
-    if (nValues < 1) {
-      RILlogMessage(NULL, Warning_1, "%13s has NO valid row.", DS_ISGR_HK);
-      status=DAL3IBIS_NO_VALID_HK;
-      break;
+            strcpy(hkName, KEY_MCE_BIAS);
+            sprintf(num, "%d", j);
+            strcat(hkName, num);
+            /* get the information for the requested data */
+            status=DAL3HKgetValueInfo(workGRP, hkName, IBIS, DAL3HK_CONVERTED,
+                    startTime, endTime,  &nValues, &dataType, status);
+            if (status != ISDC_OK) break;
+            if (nValues < 1) {
+                RILlogMessage(NULL, Warning_1, "%13s has NO valid row.", DS_ISGR_HK);
+                status=DAL3IBIS_NO_VALID_HK;
+                break;
+            }
+            /* now allocate the required memory and get the data values */
+            if (status != ISDC_OK) {
+                RILlogMessage(NULL, Error_1, "Cannot allocate buffers for HK data: %s",
+                        hkName);
+                break;
+            }
+            /* retrieve the housekeeping data from the fits file */
+            status=DALallocateDataBuffer((void **)&hkBuff, nValues*sizeof(double), status);
+            status=DALallocateDataBuffer((void **)&obtime, nValues*sizeof(OBTime), status);
+            dataType=DAL_DOUBLE;
+            status=DAL3HKgetValues(workGRP, hkName, IBIS, DAL3HK_CONVERTED,
+                    startTime, endTime, obtime, hkBuff, dataType, status);
+            if (status != ISDC_OK) {
+                RILlogMessage(NULL, Error_1, "Cannot get buffers for HK data: %s",
+                        hkName);
+                break;
+            }
+            totVal[j]=0;
+            myMean=0.0;
+            for (i=0; i<nValues; i++) {
+                if (hkBuff[i]  <  KEY_MAX_BIAS) { myMean+=hkBuff[i]; totVal[j]++; }
+            }
+            if (totVal[j] < 1) {
+                RILlogMessage(NULL, Warning_1, "Column %19s has NO valid data.", hkName);
+                RILlogMessage(NULL, Warning_1, "Continue to next HK data");
+                /* meanBias[j] not changed, already contains default KEY_DEF_BIAS */
+            }
+            else {
+                meanBias[j]=myMean/totVal[j];
+                totMCE++;
+            }
+
+        }
+        if (totMCE) {
+            myMean=0.0; myTot=0.0;
+            for (j=0; j<8; j++)
+                if (totVal[j] > 0) { myMean+=meanBias[j]; myTot+=totVal[j]; }
+            myMean/=totMCE;
+            if (chatter > 1)
+                RILlogMessage(NULL, Log_1, "Mean bias (%05.1f values) on %d MCEs: %+6.1f V",
+                        myTot/totMCE, totMCE, myMean);
+        }
+        else
+            RILlogMessage(NULL, Warning_1, "Using default ISGRI mean bias: %+6.1f V",
+                    KEY_DEF_BIAS);
     }
-    /* now allocate the required memory and get the data values */
-    status=DALallocateDataBuffer((void **)&hkBuff, nValues*sizeof(double), status);
-    status=DALallocateDataBuffer((void **)&obtime, nValues*sizeof(OBTime), status);
+    /* in any case must call this function to free internal buffers */
+    DAL3HKfreeData(status);
+    if (hkBuff != NULL) DAL_GC_freeDataBuffer((void *)hkBuff, ISDC_OK);
+    if (obtime != NULL) DAL_GC_freeDataBuffer((void *)obtime, ISDC_OK);
+
     if (status != ISDC_OK) {
-      RILlogMessage(NULL, Error_1, "Cannot allocate buffers for HK data: %s",
-                                    hkName);
-      break;
+        RILlogMessage(NULL, Warning_2, "Reverting from status=%d to ISDC_OK",
+                status);
+        RILlogMessage(NULL, Warning_2, "Using constant ISGRI temperature and bias (%+6.2f %+6.1f)",
+                KEY_DEF_TEMP, KEY_DEF_BIAS);
+    } else if (chatter > 3) {
+        RILlogMessage(NULL, Log_0, "Mean ISGRI module bias (V):");
+        strcpy(logString, "");
+        for (i=0; i<8; i++) {
+            sprintf(hkName, " %+6.1f", meanBias[i]);
+            strcat(logString, hkName);
+        }
+        RILlogMessage(NULL, Log_0, logString);
+        RILlogMessage(NULL, Log_0, "Mean ISGRI module Temperature (C):");
+        strcpy(logString, "");
+        for (i=0; i<8; i++) {
+            sprintf(hkName, " %+6.1f", meanT[i]);
+            strcat(logString, hkName);
+        }
+        RILlogMessage(NULL, Log_0, logString);
     }
-    /* retrieve the housekeeping data from the fits file */
-    dataType=DAL_DOUBLE;
-    status=DAL3HKgetValues(workGRP, hkName, IBIS, DAL3HK_CONVERTED,
-                           startTime, endTime, obtime, hkBuff, dataType, status);
-    if (status != ISDC_OK) {
-      RILlogMessage(NULL, Error_1, "Cannot get buffers for HK data: %s",
-                                    hkName);
-      break;
-    }
-    totVal[j]=0;
-    myMean=0.0;
-    for (i=0; i<nValues; i++) {
-      if (hkBuff[i]  <  KEY_MAX_BIAS) { myMean+=hkBuff[i]; totVal[j]++; }
-    }
-    if (totVal[j] < 1) {
-      RILlogMessage(NULL, Warning_1, "Column %19s has NO valid data.", hkName);
-      RILlogMessage(NULL, Warning_1, "Continue to next HK data");
-      /* meanBias[j] not changed, already contains default KEY_DEF_BIAS */
-    }
-    else {
-      meanBias[j]=myMean/totVal[j];
-      totMCE++;
-    }
-
-  }
-  if (totMCE) {
-    myMean=0.0; myTot=0.0;
-    for (j=0; j<8; j++)
-      if (totVal[j] > 0) { myMean+=meanBias[j]; myTot+=totVal[j]; }
-    myMean/=totMCE;
-    if (chatter > 1)
-      RILlogMessage(NULL, Log_1, "Mean bias (%05.1f values) on %d MCEs: %+6.1f V",
-                                myTot/totMCE, totMCE, myMean);
-  }
-  else
-    RILlogMessage(NULL, Warning_1, "Using default ISGRI mean bias: %+6.1f V",
-                                  KEY_DEF_BIAS);
-}
-  /* in any case must call this function to free internal buffers */
-  DAL3HKfreeData(status);
-  if (hkBuff != NULL) DALfreeDataBuffer((void *)hkBuff, ISDC_OK);
-  if (obtime != NULL) DALfreeDataBuffer((void *)obtime, ISDC_OK);
-
-  if (status != ISDC_OK) {
-      RILlogMessage(NULL, Warning_2, "Reverting from status=%d to ISDC_OK",
-              status);
-      RILlogMessage(NULL, Warning_2, "Using constant ISGRI temperature and bias (%+6.2f %+6.1f)",
-              KEY_DEF_TEMP, KEY_DEF_BIAS);
-  } else if (chatter > 3) {
-    RILlogMessage(NULL, Log_0, "Mean ISGRI module bias (V):");
-    strcpy(logString, "");
-    for (i=0; i<8; i++) {
-        sprintf(hkName, " %+6.1f", meanBias[i]);
-        strcat(logString, hkName);
-    }
-    RILlogMessage(NULL, Log_0, logString);
-    RILlogMessage(NULL, Log_0, "Mean ISGRI module Temperature (C):");
-    strcpy(logString, "");
-    for (i=0; i<8; i++) {
-        sprintf(hkName, " %+6.1f", meanT[i]);
-        strcat(logString, hkName);
-    }
-    RILlogMessage(NULL, Log_0, logString);
-}
-status=ISDC_OK;
+    status=ISDC_OK;
 
     for (j=0;j<8;j++)
     {
@@ -429,9 +527,7 @@ status=ISDC_OK;
         meanBias[j]=1.2;  // because who cares about the bias
     }
 
-
-
-  return status;
+    return status;
 }
 
 
@@ -485,8 +581,8 @@ inline int DAL3IBIS_reconstruct_ISGRI_energy(
     else if (ipha<0) {ipha=0; ptr_infoEvt->pha_too_low++;}
 
     // only pha interpolation, as before
-    *ptr_isgri_energy=ptr_ISGRI_energy_calibration->LUT2[irt][ipha]; \
-            +(ptr_ISGRI_energy_calibration->LUT2[irt][ipha+1]-ptr_ISGRI_energy_calibration->LUT2[irt][ipha])*(pha/2.-(double)ipha);
+    *ptr_isgri_energy=ptr_ISGRI_energy_calibration->LUT2[irt+ipha*ISGRI_LUT2_N_RT]; \
+            +(ptr_ISGRI_energy_calibration->LUT2[irt+ipha*ISGRI_LUT2_N_RT+1]-ptr_ISGRI_energy_calibration->LUT2[irt+ipha*ISGRI_LUT2_N_RT])*(pha/2.-(double)ipha);
 
     // invalid LUT2 values
     if (ptr_isgri_energy <= 0) {
@@ -542,7 +638,7 @@ int DAL3IBIS_reconstruct_ISGRI_energies(
 int allocate_2d(void *** ptr, int N1, int N2, int elem, int status) {
     int i;
     *ptr=NULL;
-    status=DALallocateDataBuffer((void **)&(*ptr), N1*sizeof(char*), status);
+    status=DAL_GC_allocateDataBuffer((void **)&(*ptr), N1*sizeof(char*), status, "2d allocation");
 
     if (status!=ISDC_OK) {
         RILlogMessage(NULL,Error_1,"allocation failed!");
@@ -551,7 +647,7 @@ int allocate_2d(void *** ptr, int N1, int N2, int elem, int status) {
 
     for (i=0;i<N1;i++) {
         (*ptr)[i]=NULL;
-        status=DALallocateDataBuffer((void **)&((*ptr)[i]), N2*elem, status);
+        status=DALallocateDataBuffer((void **)&((*ptr)[i]), N2*elem, status); // !! unhandled
     };
     return status;
 }
@@ -574,8 +670,6 @@ int DAL3IBIS_init_ISGRI_energy_calibration(ISGRI_energy_calibration_struct *ptr_
         ptr_ISGRI_energy_calibration->MDU_correction.rt_pha_cross_gain[i_mdu]=0;
     } 
 
-    status=allocate_2d((void ***)&ptr_ISGRI_energy_calibration->LUT2, ISGRI_LUT2_N_RT, ISGRI_LUT2_N_PHA, sizeof(double),status);
-    
     status=allocate_2d((void ***)&ptr_ISGRI_energy_calibration->LUT1.pha_gain, 128, 128, sizeof(double),status);
     status=allocate_2d((void ***)&ptr_ISGRI_energy_calibration->LUT1.pha_offset, 128, 128, sizeof(double),status);
     status=allocate_2d((void ***)&ptr_ISGRI_energy_calibration->LUT1.rt_gain, 128, 128, sizeof(double),status);
@@ -587,12 +681,12 @@ int DAL3IBIS_init_ISGRI_energy_calibration(ISGRI_energy_calibration_struct *ptr_
     ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.pha_offset=NULL;
     ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.rt_gain=NULL;
     ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.rt_offset=NULL;
-    status=DALallocateDataBuffer((void **)&(ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.ijd), ISGRI_REVO_N*sizeof(double), status);
-    status=DALallocateDataBuffer((void **)&(ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.pha_gain), ISGRI_REVO_N*sizeof(double), status);
-    status=DALallocateDataBuffer((void **)&(ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.pha_gain2), ISGRI_REVO_N*sizeof(double), status);
-    status=DALallocateDataBuffer((void **)&(ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.pha_offset), ISGRI_REVO_N*sizeof(double), status);
-    status=DALallocateDataBuffer((void **)&(ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.rt_gain), ISGRI_REVO_N*sizeof(double), status);
-    status=DALallocateDataBuffer((void **)&(ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.rt_offset), ISGRI_REVO_N*sizeof(double), status);
+    status=DAL_GC_allocateDataBuffer((void **)&(ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.ijd), ISGRI_REVO_N*sizeof(double), status,"LUT2 evolution IJD");
+    status=DAL_GC_allocateDataBuffer((void **)&(ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.pha_gain), ISGRI_REVO_N*sizeof(double), status,"LUT2 evolution PHA gain");
+    status=DAL_GC_allocateDataBuffer((void **)&(ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.pha_gain2), ISGRI_REVO_N*sizeof(double), status,"LUT2 evolution PHA gain2");
+    status=DAL_GC_allocateDataBuffer((void **)&(ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.pha_offset), ISGRI_REVO_N*sizeof(double), status,"LUT2 evolution PHA offset");
+    status=DAL_GC_allocateDataBuffer((void **)&(ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.rt_gain), ISGRI_REVO_N*sizeof(double), status,"LUT2 evolution RT gain");
+    status=DAL_GC_allocateDataBuffer((void **)&(ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.rt_offset), ISGRI_REVO_N*sizeof(double), status,"LUT2 evolution RT offset");
 
     return status;
 }
@@ -682,16 +776,16 @@ int DAL3IBIS_read_ISGRI_events(dal_element *workGRP,
     ptr_ISGRI_events->isgri_pi=NULL;
 
     buffSize= ptr_ISGRI_events->numEvents * sizeof(DAL3_Word);
-    status=DALallocateDataBuffer((void **)&(ptr_ISGRI_events->isgriPha), buffSize, status);
+    status=DAL_GC_allocateDataBuffer((void **)&(ptr_ISGRI_events->isgriPha), buffSize, status,"ISGRI events PHA");
     buffSize= ptr_ISGRI_events->numEvents * sizeof(DAL3_Byte);
-    status=DALallocateDataBuffer((void **)&(ptr_ISGRI_events->riseTime), buffSize, status);
-    status=DALallocateDataBuffer((void **)&(ptr_ISGRI_events->isgriY),   buffSize, status);
-    status=DALallocateDataBuffer((void **)&(ptr_ISGRI_events->isgriZ),   buffSize, status);
+    status=DAL_GC_allocateDataBuffer((void **)&(ptr_ISGRI_events->riseTime), buffSize, status,"ISGRI events RT");
+    status=DAL_GC_allocateDataBuffer((void **)&(ptr_ISGRI_events->isgriY),   buffSize, status,"ISGRI events Y");
+    status=DAL_GC_allocateDataBuffer((void **)&(ptr_ISGRI_events->isgriZ),   buffSize, status,"ISGRI events Z");
     
     buffSize= ptr_ISGRI_events->numEvents * sizeof(float);
-    status=DALallocateDataBuffer((void **)&(ptr_ISGRI_events->isgri_energy),   buffSize, status);
+    status=DAL_GC_allocateDataBuffer((void **)&(ptr_ISGRI_events->isgri_energy),   buffSize, status,"ISGRI events ENERGY");
     buffSize= ptr_ISGRI_events->numEvents * sizeof(DAL3_Byte);
-    status=DALallocateDataBuffer((void **)&(ptr_ISGRI_events->isgri_pi),   buffSize, status);
+    status=DAL_GC_allocateDataBuffer((void **)&(ptr_ISGRI_events->isgri_pi),   buffSize, status,"ISGRI events PI");
 
     if (status != ISDC_OK) {
       RILlogMessage(NULL, Error_2, "Cannot allocate buffers for input/output data");
@@ -775,7 +869,7 @@ int DAL3IBIS_open_LUT1(char *dol_LUT1, dal_element **ptr_ptr_dal_LUT1, int chatt
     long numRow;
     int numCol;
 
-    status=DALobjectOpen(dol_LUT1, ptr_ptr_dal_LUT1, status);
+    status=DAL_GC_objectOpen(dol_LUT1, ptr_ptr_dal_LUT1, status);
     status=DALelementGetName(*ptr_ptr_dal_LUT1, keyVal, status);
 
     if (status != ISDC_OK) {
@@ -888,7 +982,7 @@ int DAL3IBIS_open_LUT2(char *dol_LUT2, dal_element **ptr_dal_LUT2, int chatter, 
     long int dimAxes[2];  
     dal_dataType type;
 
-    status=DALobjectOpen(dol_LUT2, ptr_dal_LUT2, status);
+    status=DAL_GC_objectOpen(dol_LUT2, ptr_dal_LUT2, status);
     status=DALelementGetName(*ptr_dal_LUT2, keyVal, status);
 
     if (status != ISDC_OK) {
@@ -929,24 +1023,105 @@ int DAL3IBIS_read_LUT2(dal_element **ptr_ptr_dal_LUT2, ISGRI_energy_calibration_
     long int my_numValues;
     long int my_startValues[2]={1,1},
         my_endValues[2]={ISGRI_LUT2_N_RT,ISGRI_LUT2_N_PHA};
-    double *LUT2_tmp=NULL;
-    int i_rt,i_pha;
 
     if (chatter > 3) RILlogMessage(NULL, Log_0, "ISGRI rise-time LUT2 reading...");
 
-    status=DALallocateDataBuffer((void **)&LUT2_tmp, ISGRI_LUT2_N_RT*ISGRI_LUT2_N_PHA*sizeof(double), status);
+    status=DAL_GC_allocateDataBuffer((void **)&ptr_ISGRI_energy_calibration->LUT2, ISGRI_LUT2_N_RT*ISGRI_LUT2_N_PHA*sizeof(double), status, "LUT2");
     if (status != ISDC_OK) 
         return status;
 
     type=DAL_DOUBLE;
     status=DALarrayGetSection(*ptr_ptr_dal_LUT2, ISGRI_DIM_LUT2, my_startValues,
                               my_endValues, &type, &my_numValues,
-                              (void *)LUT2_tmp, status);
+                              (void *)ptr_ISGRI_energy_calibration->LUT2, status);
 
-    for (i_rt=0;i_rt<ISGRI_LUT2_N_RT;i_rt++) for (i_pha=0;i_pha<ISGRI_LUT2_N_PHA;i_pha++)  {
-        ptr_ISGRI_energy_calibration->LUT2[i_rt][i_pha]=LUT2_tmp[i_rt + i_pha*ISGRI_LUT2_N_RT];
+    if (status != ISDC_OK) {
+      RILlogMessage(NULL, Error_2, "Cannot read LUT2 array. Status=%d", status);
+      return status;
     }
 
+    return status;
+}
+
+////////////////////////
+
+int DAL3IBIS_populate_newest_LUT2_rapid_evolution(ISGRI_events_struct *ptr_ISGRI_events, ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration, int chatter, int status) {
+    char dol_L2RE[DAL_MAX_STRING];
+
+    status=doICgetNewestDOL("ISGR-L2RE-MOD","",ptr_ISGRI_events->ijdStart,dol_L2RE,status);
+    RILlogMessage(NULL,Log_0,"Found ISGR-L2RE-MOD as %s",dol_L2RE);
+
+    status=DAL3IBIS_populate_L2RE(dol_L2RE, ptr_ISGRI_energy_calibration, chatter, status);
+    return status;
+}
+
+int DAL3IBIS_populate_L2RE(char *dol_L2RE, ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration, int chatter, int status) {
+    dal_element *ptr_dal_L2RE;
+    status=DAL3IBIS_open_L2RE(dol_L2RE,&ptr_dal_L2RE,chatter,status);
+    status=DAL3IBIS_read_L2RE(&ptr_dal_L2RE,ptr_ISGRI_energy_calibration,chatter,status);
+    return status;
+}
+
+int DAL3IBIS_open_L2RE(char *dol_L2RE, dal_element **ptr_dal_L2RE, int chatter, int status) {
+
+    char keyVal[DAL_MAX_STRING];
+    int numRow, numCol, numAxes;
+    long int dimAxes[2];  
+    dal_dataType type;
+
+    status=DAL_GC_objectOpen(dol_L2RE, ptr_dal_L2RE, status);
+    status=DALelementGetName(*ptr_dal_L2RE, keyVal, status);
+
+    if (status != ISDC_OK) {
+      RILlogMessage(NULL, Error_2, "%13s LUT2 rapid evolution cannot be opened. Status=%d",
+                                  DS_ISGR_L2RE, status);
+      return status=I_ISGR_ERR_BAD_INPUT; // file not found!
+    }
+    if (strcmp(keyVal, DS_ISGR_L2RE)) {
+      RILlogMessage(NULL, Error_2, "File (%s) should be a %13s not %s",
+                                  dol_LUT2, DS_ISGR_L2RE, keyVal);
+      return status=I_ISGR_ERR_BAD_INPUT;
+    }
+
+    /*
+    status=DALarrayGetStruct(*ptr_dal_LUT2, &type, &numAxes, dimAxes, status);
+    if (status != ISDC_OK) {
+      RILlogMessage(NULL, Error_2, "Cannot get the 2 sizes of array %13s. Status=%d",
+                                  DS_ISGR_LUT2, status);
+      return status=I_ISGR_ERR_ISGR_RISE_BAD;
+    }
+
+    if (numAxes != ISGRI_DIM_LUT2) {
+      RILlogMessage(NULL, Error_2, "%13s image must be a 2D array.", DS_ISGR_LUT2);
+      return status=I_ISGR_ERR_ISGR_RISE_BAD;
+    }
+
+    if (  (dimAxes[0]!=ISGRI_LUT2_N_RT) || (dimAxes[1]!=ISGRI_LUT2_N_PHA)) {
+      RILlogMessage(NULL, Error_2, "%13s array dimensions must be: %d*%d not %d*%d",
+                                  DS_ISGR_LUT2, ISGRI_LUT2_N_RT, ISGRI_LUT2_N_PHA, dimAxes[0], dimAxes[1]);
+      status=I_ISGR_ERR_ISGR_RISE_BAD;
+      return status;
+    }*/
+
+    return status;
+}
+
+int DAL3IBIS_read_L2RE(dal_element **ptr_ptr_dal_L2RE, ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration, int chatter, int status) {
+    dal_dataType type;
+    long int my_numValues;
+    long int my_startValues[2]={1,1},
+        my_endValues[2]={ISGRI_L2RE_N_RT,ISGRI_L2RE_N_PHA};
+
+    if (chatter > 3) RILlogMessage(NULL, Log_0, "ISGRI rise-time LUT2 reading...");
+
+    status=DAL_GC_allocateDataBuffer((void **)&ptr_ISGRI_energy_calibration->LUT2, ISGRI_LUT2_N_RT*ISGRI_LUT2_N_PHA*sizeof(double), status, "LUT2");
+    if (status != ISDC_OK) 
+        return status;
+
+    type=DAL_DOUBLE;
+    status=DALarrayGetSection(*ptr_ptr_dal_LUT2, ISGRI_DIM_LUT2, my_startValues,
+                              my_endValues, &type, &my_numValues,
+                              (void *)ptr_ISGRI_energy_calibration->LUT2, status);
 
     if (status != ISDC_OK) {
       RILlogMessage(NULL, Error_2, "Cannot read LUT2 array. Status=%d", status);

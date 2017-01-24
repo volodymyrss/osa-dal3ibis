@@ -48,7 +48,7 @@ typedef struct ISGRI_energy_calibration_struct {
         int ** pixtype;
     } LUT1;
 
-    double ** LUT2;
+    double * LUT2; // i_rt + i_pha*ISGRI_LUT2_N_RT
 
     // in principle per pointing, but interpolated
     struct LUT2_rapid_evolution_struct { 
@@ -140,6 +140,11 @@ int DAL3IBIS_MceIsgriHkCal(dal_element *workGRP,
         double       meanBias[8],
         int          chatter,
         int          status);
+
+#define TRY_BLOCK_BEGIN  do { 
+#define TRY_BLOCK_END } while(0);
+#define TRY(call,fail_status,...) if ( status=call != ISDC_OK ) { status=fail_status; RILlogMessage(NULL,Error_1,##__VA_ARGS__); break;}
+
 
 #ifndef __CINT__
 #ifdef __cplusplus

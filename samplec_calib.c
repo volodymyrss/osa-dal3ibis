@@ -59,6 +59,9 @@
     return status;
 }*/
 
+#define TRY_BLOCK_BEGIN  do { 
+#define TRY_BLOCK_END } while(0);
+#define TRY(call,fail_status,...) if ( status=call != ISDC_OK ) { status=fail_status; RILlogMessage(NULL,Error_1,##__VA_ARGS__); break;}
 
 int main(int arg, char *argv[]) {
 
@@ -77,67 +80,51 @@ int main(int arg, char *argv[]) {
 
   status=ISDC_OK;
 
+  TRY_BLOCK_BEGIN
+      TRY(RILinit(&fileRef, "", OUT_ALL, "Default"),status,"RILinit");
 
-  status = RILinit(&fileRef, "", OUT_ALL, "Default");
+      printf("OBJECT            : %s\n",argv[1]);
 
-  printf("OBJECT            : %s\n",argv[1]);
+      OBT_num=0;
+      type=DAL_LONG;
+      
+      printf("DALobjectOpen\n");
+      TRY(DAL_GC_objectOpen(argv[1],&DAL_DS,status,"input object"),status,"opening input %s",argv[1]);
+      
+      ISGRI_events_struct ISGRI_events;
+      ISGRI_energy_calibration_struct ISGRI_energy_calibration;
 
-  OBT_num=0;
+      TRY( DAL3IBIS_read_ISGRI_events(DAL_DS,&ISGRI_events,1,chatter,status), status, "reading ISGRI events"); 
+      TRY( DAL3IBIS_init_ISGRI_energy_calibration(&ISGRI_energy_calibration,status), status, "initializing ISGRI energy calibration");
 
-  type=DAL_LONG;
+      TRY( DAL3IBIS_populate_newest_LUT1(&ISGRI_events,&ISGRI_energy_calibration,chatter,status), status, "loading LUT1" );
+      TRY( DAL3IBIS_correct_LUT1_for_temperature_bias(DAL_DS,&ISGRI_energy_calibration,&ISGRI_events,chatter,status), status, "correcting for LUT1 temperature bias");
 
+      TRY( DAL3IBIS_populate_newest_LUT2(&ISGRI_events,&ISGRI_energy_calibration,chatter,status), status, "loading LUT2" );
+      
+      TRY( DAL3IBIS_populate_newest_LUT2_rapid_evolution(&ISGRI_events,&ISGRI_energy_calibration,chatter,status), status, "loading LUT2" );
+
+      TRY( DAL3IBIS_reconstruct_ISGRI_energies(&ISGRI_energy_calibration,&ISGRI_events,chatter,status), status, "reconstructing energies");
+
+      /* Getting the total number of events ...                                  */
+      /* No selection is made with this function; it really returns every event  */
+      /* that i spresent in the group.                                           */
+      printf("DAL3IBISshowAllEvents\n");
+      status=DAL3IBISshowAllEvents(DAL_DS,ib_ev,status);
+      printf("ISGRI Events            : %ld\n",ib_ev[ISGRI_EVTS]);
+      printf("PICsIT Single Events    : %ld\n",ib_ev[PICSIT_SGLE]);
+      printf("PICsIT Multiple Events  : %ld\n",ib_ev[PICSIT_MULE]);
+      printf("COMPTON Single Events   : %ld\n",ib_ev[COMPTON_SGLE]);
+      printf("COMPTON Multiple Events : %ld\n",ib_ev[COMPTON_MULE]);
+      printf("Status: %d\n\n",status);
+
+  TRY_BLOCK_END
   
-  /* Opening the Group ...                                                   */
-  printf("DALobjectOpen\n");
-  status=DALobjectOpen(argv[1],&DAL_DS,status);
-  if (status!=ISDC_OK) {
-      RILlogMessage(NULL,Error_1,"status %i",status);
-      return status;
-  };
-  
-  
-  ISGRI_events_struct ISGRI_events;
-  ISGRI_energy_calibration_struct ISGRI_energy_calibration;
+  //DAL_GC_print();
+  DAL_GC_free_all();
 
-  status=DAL3IBIS_read_ISGRI_events(DAL_DS,&ISGRI_events,1,chatter,status);
-  status=DAL3IBIS_init_ISGRI_energy_calibration(&ISGRI_energy_calibration,status);
-
-  status=DAL3IBIS_populate_newest_LUT1(&ISGRI_events,&ISGRI_energy_calibration,chatter,status);
-  status=DAL3IBIS_correct_LUT1_for_temperature_bias(DAL_DS,&ISGRI_energy_calibration,&ISGRI_events,chatter,status);
-
-  status=DAL3IBIS_populate_newest_LUT2(&ISGRI_events,&ISGRI_energy_calibration,chatter,status);
-
-  status=DAL3IBIS_reconstruct_ISGRI_energies(&ISGRI_energy_calibration,&ISGRI_events,chatter,status);
-
-  /* Getting the total number of events ...                                  */
-  /* No selection is made with this function; it really returns every event  */
-  /* that i spresent in the group.                                           */
-  printf("DAL3IBISshowAllEvents\n");
-  status=DAL3IBISshowAllEvents(DAL_DS,ib_ev,status);
-  printf("ISGRI Events            : %ld\n",ib_ev[ISGRI_EVTS]);
-  printf("PICsIT Single Events    : %ld\n",ib_ev[PICSIT_SGLE]);
-  printf("PICsIT Multiple Events  : %ld\n",ib_ev[PICSIT_MULE]);
-  printf("COMPTON Single Events   : %ld\n",ib_ev[COMPTON_SGLE]);
-  printf("COMPTON Multiple Events : %ld\n",ib_ev[COMPTON_MULE]);
-  printf("Status: %d\n\n",status);
-
-  /* Event selection ...                                                     */
-  /* Again, as there is no memory issue here, all event parameters (ALL_PAR) */
-  /* are copied into the selected events table                               */
-  
-
-  /* Closing the selected events table ...                                   */
-  /* This step is not mandatory. It is useful if the application still       */
-  /* important ressources once the events have been processed.               */
-  
-
- // status=doICgetNewestDOL("ISGR-EFFI-MOD","",3000,DOL,status);
- // printf("found IC DOL            : %s\n",DOL);
-
-
-  status=DALobjectClose(DAL_DS,DAL_SAVE,status);
-  printf("Status: %d\n",status);
-  
+//status=DALobjectClose(DAL_DS,DAL_SAVE,status);
+  printf("Final status: %d\n",status);
 
   return(ISDC_OK);
 }
