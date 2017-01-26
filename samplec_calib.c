@@ -106,7 +106,9 @@ int main(int arg, char *argv[]) {
       ISGRI_efficiency_struct ISGRI_efficiency;
 
 
-      TRY( DAL3IBIS_read_IBIS_events(DAL_DS,ISGRI_EVTS,&IBIS_events,1,chatter,status), 0, "reading ISGRI events"); 
+      TRY( DAL3IBIS_read_IBIS_events(DAL_DS,COMPTON_SGLE,&IBIS_events,1,chatter,status), 0, "reading Compton events"); 
+      //TRY( DAL3IBIS_read_IBIS_events(DAL_DS,ISGRI_EVTS,&IBIS_events,1,chatter,status), 0, "reading ISGRI events"); 
+
       TRY( DAL3IBIS_init_ISGRI_energy_calibration(&ISGRI_energy_calibration,status), status, "initializing ISGRI energy calibration");
       TRY( DAL3IBIS_init_PICsIT_energy_calibration(&PICsIT_energy_calibration,status), status, "initializing PICsIT energy calibration");
       

@@ -575,6 +575,8 @@ int DAL3IBIS_reconstruct_Compton_energies(
     if (ptr_IBIS_events->event_kind != COMPTON_SGLE && ptr_IBIS_events->event_kind != COMPTON_MULE) 
         return -1;
 
+    RILlogMessage(NULL, Log_0, "reconstructing Compton energies");
+
     for (i=0; i<ptr_IBIS_events->numEvents; i++) {
 
         DAL3IBIS_reconstruct_ISGRI_energy(
@@ -628,6 +630,8 @@ int DAL3IBIS_reconstruct_ISGRI_energies(
         ) {
 
     long i;
+    
+    RILlogMessage(NULL, Log_0, "reconstructing ISGRI energies");
 
     for (i=0; i<ptr_IBIS_events->numEvents; i++) {
 
@@ -830,11 +834,11 @@ int DAL3IBIS_read_IBIS_events(dal_element *workGRP,
 
     if (event_kind == COMPTON_SGLE || event_kind == COMPTON_MULE ) {
         type=DAL_BYTE;
-        status=DAL3IBISgetEvents(PICSIT_PHA,&type, (void *)*ptr_IBIS_events->picsitPha, status);
+        status=DAL3IBISgetEvents(PICSIT_PHA,&type, (void *)ptr_IBIS_events->picsitPha, status);
         type=DAL_BYTE;
-        status=DAL3IBISgetEvents(PICSIT_Y,  &type, (void *)*ptr_IBIS_events->picsitY,   status);
+        status=DAL3IBISgetEvents(PICSIT_Y,  &type, (void *)ptr_IBIS_events->picsitY,   status);
         type=DAL_BYTE;
-        status=DAL3IBISgetEvents(PICSIT_Z,  &type, (void *)*ptr_IBIS_events->picsitZ,   status);
+        status=DAL3IBISgetEvents(PICSIT_Z,  &type, (void *)ptr_IBIS_events->picsitZ,   status);
     }
 
 
