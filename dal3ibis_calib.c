@@ -868,6 +868,12 @@ int DAL3IBIS_populate_newest_LUT2(ISGRI_events_struct *ptr_ISGRI_events, ISGRI_e
     char dol_LUT2[DAL_MAX_STRING];
 
     status=doICgetNewestDOL(DS_ISGR_LUT2,"",ptr_ISGRI_events->ijdStart,dol_LUT2,status);
+
+    if (status != ISDC_OK) {
+        RILlogMessage(NULL,Log_0,"failed to find %s",DS_ISGR_LUT2);
+        return status;
+    }
+
     RILlogMessage(NULL,Log_0,"Found %s as %s",DS_ISGR_LUT2,dol_LUT2);
 
     status=DAL3IBIS_populate_LUT2(dol_LUT2, ptr_ISGRI_energy_calibration, chatter, status);
@@ -973,10 +979,11 @@ int DAL3IBIS_read_LUT2_image(dal_element **ptr_ptr_dal_LUT2, ISGRI_energy_calibr
 
 int DAL3IBIS_read_LUT2(dal_element **ptr_ptr_dal_LUT2, ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration, int chatter, int status) {
     dal_dataType type;
+    int pha,rt;
     long int numRows;
-    double energy[N_E_BAND];
-    int channel[N_E_BAND];
-    double corr[N_E_BAND][N_E_BAND];
+    double energy[ISGRI_LUT2_N_PHA];
+    int channel[ISGRI_LUT2_N_PHA];
+    double corr[ISGRI_LUT2_N_PHA][ISGRI_LUT2_N_RT];
 
     if (chatter > 3) RILlogMessage(NULL, Log_0, "ISGRI rise-time LUT2 reading...");
 
@@ -987,8 +994,8 @@ int DAL3IBIS_read_LUT2(dal_element **ptr_ptr_dal_LUT2, ISGRI_energy_calibration_
         TRY( DALtableGetNumRows(*ptr_ptr_dal_LUT2,&numRows,status) , -1, "getting Num Rows for %s",DS_ISGR_LUT2);
         if (chatter > 3) RILlogMessage(NULL, Log_0, "%s rows %li...",DS_ISGR_LUT2,numRows);
 
-        if (numRows!=N_E_BAND) {
-            RILlogMessage(NULL, Error_1, "LUT2 must be %i x %i",numRows);
+        if (numRows!=ISGRI_LUT2_N_PHA) {
+            RILlogMessage(NULL, Error_1, "LUT2 table has wrong length %i",numRows);
             return -1;
         }
 
@@ -997,11 +1004,17 @@ int DAL3IBIS_read_LUT2(dal_element **ptr_ptr_dal_LUT2, ISGRI_energy_calibration_
         TRY( DALtableGetCol(*ptr_ptr_dal_LUT2, NULL, 1, &type, NULL, (void *)(energy), status), -1, "reading LUT2 energy" );
         
         type=DAL_INT;
-        TRY( DALtableGetCol(*ptr_ptr_dal_LUT2, NULL, 2, &type, NULL, (void *)(channel), status), -1, "reading LUT2 channe");
+        TRY( DALtableGetCol(*ptr_ptr_dal_LUT2, NULL, 2, &type, NULL, (void *)(channel), status), -1, "reading LUT2 channel");
         
         type=DAL_DOUBLE;
         TRY( DALtableGetCol(*ptr_ptr_dal_LUT2, NULL, 3, &type, NULL, (void **)(corr), status), -1, "reading efficiency");
 
+
+        for (pha=0;pha<ISGRI_LUT2_N_PHA;pha++) {
+            for (rt=0;rt<ISGRI_LUT2_N_RT;rt++) {
+                ptr_ISGRI_energy_calibration->LUT2[rt+pha*ISGRI_LUT2_N_RT]=corr[pha][rt]*energy[pha];
+            }
+        }
 
     TRY_BLOCK_END
     

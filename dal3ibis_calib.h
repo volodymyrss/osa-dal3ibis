@@ -17,7 +17,7 @@
 
 
 #define ISGRI_LUT2_N_RT 256
-#define ISGRI_LUT2_N_PHA 1024
+#define ISGRI_LUT2_N_PHA 2048 // 256?
 #define ISGRI_DIM_LUT2 2
 
 #define ISGRI_REVO_N 128

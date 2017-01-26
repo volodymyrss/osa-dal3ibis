@@ -1,4 +1,10 @@
+#include "dal3ibis.h"
+#include "dal3ibis_calib.h"
+#include "dal3hk.h"
+#include "dal3aux.h"
+#include "ril.h"
 #include "dal3ibis_calib_aux.h"
+
 
 int print_error(int status) {
   /* If an error occurred, write a message describing the final status. */
