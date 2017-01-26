@@ -92,7 +92,7 @@ int DAL3IBIS_correct_LUT1_for_temperature_bias(
     char logstr_rt_offset[DAL_BIG_STRING];
 
     double meanTemp[8], meanBias[8];
-    status=DAL3IBIS_MceIsgriHkCal(workGRP,ptr_ISGRI_events->obtStart,ptr_ISGRI_events->obtEnd,meanTemp,meanBias,chatter,status);
+    status=DAL3IBIS_MceIsgriHkCal(workGRP,ptr_ISGRI_events->obtStart,ptr_ISGRI_events->obtStop,meanTemp,meanBias,chatter,status);
 
     sprintf(logstr_pha_gain,  "Bias-Temperature MCE PHA gain  ");
     sprintf(logstr_pha_offset,"                 MCE PHA offset");
@@ -161,7 +161,7 @@ int DAL3IBIS_correct_LUT1_for_temperature_bias(
  ************************************************************************/
 int DAL3IBIS_MceIsgriHkCal(dal_element *workGRP,
                          OBTime       obtStart,
-                         OBTime       obtEnd,
+                         OBTime       obtStop,
                          double       meanT[8],
                          double       meanBias[8],
                          int          chatter,
@@ -205,10 +205,10 @@ int DAL3IBIS_MceIsgriHkCal(dal_element *workGRP,
         if ( (obtime=(OBTime *)calloc(1, sizeof(OBTime))) == NULL)
             return(DAL3IBIS_ERR_MEMORY);
 
-        endTime=obtEnd;
+        endTime=obtStop;
         /* check if OBT are not too close */
         do {
-            status=DAL3GENelapsedOBT(obtEnd, obtStart, &startTime, status);
+            status=DAL3GENelapsedOBT(obtStop, obtStart, &startTime, status);
             if (status != ISDC_OK) {
                 RILlogMessage(NULL, Warning_1, "Error calculating elapsed OBT");
                 RILlogMessage(NULL, Warning_1, "Reverting from status=%d to ISDC_OK",
@@ -220,7 +220,7 @@ int DAL3IBIS_MceIsgriHkCal(dal_element *workGRP,
             if (startTime < *obtime) {
 
                 RILlogMessage(NULL, Warning_1, "Last OBT (%020lld) too close from first OBT (%020lld)",
-                        obtEnd, obtStart);
+                        obtStop, obtStart);
                 status=DAL3GENskipOBT(obtStart, *obtime, &startTime, status);
                 if (status != ISDC_OK) {
                     RILlogMessage(NULL, Warning_1, "Error adding %d seconds to first OBT", SEC_DELTA_MIN);
@@ -462,11 +462,6 @@ inline int DAL3IBIS_reconstruct_ISGRI_energy(
     int ipha;
     int ipha2;
 
-    pha+=DAL3GENrandomDoubleX1();
-    riseTime+=DAL3GENrandomDoubleX1();
-
-    // 256 channels for LUT2 calibration scaled 
-    rt = 2.*riseTime/2.4+5.0;  
 
     if ((isgriY<0) | (isgriY>=128) |(isgriZ<0) |(isgriZ>=128)) { // 127?..
          ptr_infoEvt->bad_pixel_yz++;
@@ -474,6 +469,12 @@ inline int DAL3IBIS_reconstruct_ISGRI_energy(
          *ptr_isgri_pi=irt;
          return -1;
     };
+    
+    isgriPha+=DAL3GENrandomDoubleX1();
+    riseTime+=DAL3GENrandomDoubleX1();
+
+    // 256 channels for LUT2 calibration scaled 
+    rt = 2.*riseTime/2.4+5.0;  
 
     rt = rt * ptr_ISGRI_energy_calibration->LUT1.rt_gain[isgriY][isgriZ] + ptr_ISGRI_energy_calibration->LUT1.rt_offset[isgriY][isgriZ];
     pha = isgriPha * ptr_ISGRI_energy_calibration->LUT1.pha_gain[isgriY][isgriZ] + ptr_ISGRI_energy_calibration->LUT1.pha_offset[isgriY][isgriZ];
@@ -486,17 +487,22 @@ inline int DAL3IBIS_reconstruct_ISGRI_energy(
     if (irt < 0)        {irt=0;   ptr_infoEvt->rt_too_low++;}
     else if (irt >= ISGRI_LUT2_N_RT) {irt=ISGRI_LUT2_N_RT-1; ptr_infoEvt->rt_too_high++;}
 
-    ipha = floor(pha/2);
+    ipha = floor(pha);
 
     if (ipha >=ISGRI_LUT2_N_PHA-1) {ipha=ISGRI_LUT2_N_PHA-2; ptr_infoEvt->pha_too_high++;}
     else if (ipha<0) {ipha=0; ptr_infoEvt->pha_too_low++;}
 
     // only pha interpolation, as before
-    *ptr_isgri_energy=ptr_ISGRI_energy_calibration->LUT2[irt+ipha*ISGRI_LUT2_N_RT]; \
-            +(ptr_ISGRI_energy_calibration->LUT2[irt+ipha*ISGRI_LUT2_N_RT+1]-ptr_ISGRI_energy_calibration->LUT2[irt+ipha*ISGRI_LUT2_N_RT])*(pha/2.-(double)ipha);
+    *ptr_isgri_energy=ptr_ISGRI_energy_calibration->LUT2[irt+ipha*ISGRI_LUT2_N_RT];
+    
+    double gradient=(ptr_ISGRI_energy_calibration->LUT2[irt+(ipha+1)*ISGRI_LUT2_N_RT]-ptr_ISGRI_energy_calibration->LUT2[irt+ipha*ISGRI_LUT2_N_RT]); // ipha+1 danger
+    
+  //  printf("at %.5lg %.5lg %.5lg\n",pha,gradient,(pha-(double)ipha));
+    *ptr_isgri_energy+=gradient*(pha-(double)ipha);
+    
 
     // invalid LUT2 values
-    if (*ptr_isgri_energy <= 0) {
+    if (*ptr_isgri_energy < 0) {
         ptr_infoEvt->negative_energy++;
         *ptr_isgri_energy=0;
     };
@@ -605,7 +611,7 @@ int DAL3IBIS_read_ISGRI_events(dal_element *workGRP,
                                int status)
 {
     ptr_ISGRI_events->obtStart=DAL3_NO_OBTIME;
-    ptr_ISGRI_events->obtEnd=DAL3_NO_OBTIME;
+    ptr_ISGRI_events->obtStop=DAL3_NO_OBTIME;
     ptr_ISGRI_events->numEvents=0;
     ptr_ISGRI_events->infoEvt.good=0;
     ptr_ISGRI_events->infoEvt.bad_pixel_yz=0;
@@ -627,7 +633,7 @@ int DAL3IBIS_read_ISGRI_events(dal_element *workGRP,
     selected=1;
     if (gti) myLevel=PRP;  else myLevel=RAW;
     status=DAL3IBISselectEvents(workGRP, ISGRI_EVTS, myLevel, gti,
-                                &ptr_ISGRI_events->obtStart, &ptr_ISGRI_events->obtEnd, NULL, status);
+                                &ptr_ISGRI_events->obtStart, &ptr_ISGRI_events->obtStop, NULL, status);
     status=DAL3IBISgetNumEvents(&ptr_ISGRI_events->numEvents, status);
     
     if (status != ISDC_OK) {
@@ -635,19 +641,6 @@ int DAL3IBIS_read_ISGRI_events(dal_element *workGRP,
       return status;
     }
 
-    double ijds[2];
-    OBTime obts[2]={ptr_ISGRI_events->obtStart,ptr_ISGRI_events->obtEnd};
-    status=DAL3AUXconvertOBT2IJD(workGRP, TCOR_ANY, 2, (OBTime*)obts, (double*)ijds, status);
-
-    if (status != ISDC_OK) {
-      RILlogMessage(NULL, Error_1, "error converting to IJD: %i", status);
-      return status;
-    }
-      
-    RILlogMessage(NULL, Log_1, "IJD: %.5lg - %.5lg", ijds[0], ijds[1]);
-
-    ptr_ISGRI_events->ijdStart=ijds[0];
-    ptr_ISGRI_events->ijdEnd=ijds[1];
 
     if ((status == DAL3IBIS_NO_IBIS_EVENTS) || (status == DAL_TABLE_HAS_NO_ROWS)) {
       RILlogMessage(NULL, Warning_1, "Reverting from status=%d to ISDC_OK", status);
@@ -712,23 +705,37 @@ int DAL3IBIS_read_ISGRI_events(dal_element *workGRP,
         type=DAL3_OBT;
         status=DAL3IBISgetEventsBins(OB_TIME, &type, 1,1, &ptr_ISGRI_events->obtStart, status);
         buffSize= ptr_ISGRI_events->numEvents;
-        status=DAL3IBISgetEventsBins(OB_TIME, &type, buffSize,buffSize, &ptr_ISGRI_events->obtEnd, status);
+        status=DAL3IBISgetEventsBins(OB_TIME, &type, buffSize,buffSize, &ptr_ISGRI_events->obtStop, status);
+
+        double ijds[2];
+        OBTime obts[2]={ptr_ISGRI_events->obtStart,ptr_ISGRI_events->obtStop};
+        status=DAL3AUXconvertOBT2IJD(workGRP, TCOR_ANY, 2, (OBTime*)obts, (double*)ijds, status);
+
+        if (status != ISDC_OK) {
+          RILlogMessage(NULL, Error_1, "error converting to IJD: %i", status);
+          return status;
+        }
+          
+        RILlogMessage(NULL, Log_1, "IJD: %.15lg - %.15lg; %.5lg s", ijds[0], ijds[1],(ijds[1]-ijds[0])*24*3600);
+
+        ptr_ISGRI_events->ijdStart=ijds[0];
+        ptr_ISGRI_events->ijdStop=ijds[1];
 
         if ((chatter > 2) && (gti))
-            RILlogMessage(NULL, Log_0, "OBT range: %020lld , %020lld", ptr_ISGRI_events->obtStart, ptr_ISGRI_events->obtEnd);
+            RILlogMessage(NULL, Log_0, "OBT range: %020lld , %020lld", ptr_ISGRI_events->obtStart, ptr_ISGRI_events->obtStop);
 
-        if ((ptr_ISGRI_events->obtStart < 0) || (ptr_ISGRI_events->obtEnd < 0)) {
+        if ((ptr_ISGRI_events->obtStart < 0) || (ptr_ISGRI_events->obtStop < 0)) {
             if (gti) {
                 RILlogMessage(NULL, Warning_1, "At least one OBT limit is negative.");
                 RILlogMessage(NULL, Warning_1, "Using all ScW to calculate mean bias and temperature.");
             }
             ptr_ISGRI_events->obtStart=DAL3_NO_OBTIME;
-            ptr_ISGRI_events->obtEnd=DAL3_NO_OBTIME;
+            ptr_ISGRI_events->obtStop=DAL3_NO_OBTIME;
         }
     }
     else {
       ptr_ISGRI_events->obtStart=DAL3_NO_OBTIME;
-      ptr_ISGRI_events->obtEnd=DAL3_NO_OBTIME;
+      ptr_ISGRI_events->obtStop=DAL3_NO_OBTIME;
     }
     if (status != ISDC_OK) {
       RILlogMessage(NULL, Error_2, "Cannot get input data");
@@ -751,12 +758,51 @@ int DAL3IBIS_read_ISGRI_events(dal_element *workGRP,
 
   return status;
 }
+
+//typedef int (*populate_newest_DS)(ISGRI_events_struct*, void*, int, int);
+/*typedef int (*functype_open_DS)(char *LUT1, dal_element **ptr_ptr_dal_LUT1, int chatter,int status);
+typedef int (*functype_read_DS)(dal_element **ptr_dal_LUT1, void *calibration_struct, int chatter, int status);*/
+
+int DAL3IBIS_populate_newest_DS(ISGRI_events_struct *ptr_ISGRI_events, void * calibration_struct, char *DS, functype_open_DS func_open_DS, functype_read_DS func_read_DS, int chatter, int status) {
+    char dol_start[DAL_MAX_STRING];
+    char dol_stop[DAL_MAX_STRING];
+
+    TRY_BLOCK_BEGIN
+
+        TRY( doICgetNewestDOL(DS,"",ptr_ISGRI_events->ijdStart,dol_start,status) ,-1, "searching for %s",DS);
+        TRY( doICgetNewestDOL(DS,"",ptr_ISGRI_events->ijdStop,dol_stop,status) ,-1,  "searching for %s",DS);
+
+        if (strcmp(dol_start,dol_stop)!=0) {
+            RILlogMessage(NULL,Log_0,"different DOL for start and stop: %s and %s",dol_start,dol_stop);
+            return -1;
+        }
+
+        RILlogMessage(NULL,Log_0,"Found %s as %s for IJD %.15lg and %.15lg",DS,dol_start,ptr_ISGRI_events->ijdStart,ptr_ISGRI_events->ijdStop);
+        
+        TRY( DAL3IBIS_populate_DS(dol_start, calibration_struct, DS, func_open_DS, func_read_DS, chatter, status), -1, "populating calibration from %s ", DS);
+
+    TRY_BLOCK_END
+
+    return status;
+}
+
+int DAL3IBIS_populate_DS(char *dol,  void * calibration_struct, char *DS, functype_open_DS func_open_DS, functype_read_DS func_read_DS, int chatter, int status) {
+    dal_element *ptr_dal;
+    status=(*func_open_DS)(dol,&ptr_dal,chatter,status);
+    status=(*func_read_DS)(&ptr_dal,calibration_struct,chatter,status);
+    return status;
+}
     
 int DAL3IBIS_populate_newest_LUT1(ISGRI_events_struct *ptr_ISGRI_events, ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration, int chatter, int status) {
     char dol_LUT1[DAL_MAX_STRING];
 
-    status=doICgetNewestDOL("ISGR-OFFS-MOD","",ptr_ISGRI_events->ijdStart,dol_LUT1,status);
-    RILlogMessage(NULL,Log_0,"Found ISGR-OFFS-MOD as %s",dol_LUT1);
+    status=doICgetNewestDOL(DS_ISGR_LUT1,"",ptr_ISGRI_events->ijdStart,dol_LUT1,status);
+
+    if (status != ISDC_OK) {
+        RILlogMessage(NULL,Log_0,"NOT Found %s as %s",dol_LUT1);
+        return status;
+    }
+    RILlogMessage(NULL,Log_0,"Found %s as %s",DS_ISGR_LUT1,dol_LUT1);
 
     status=DAL3IBIS_populate_LUT1(dol_LUT1, ptr_ISGRI_energy_calibration, chatter, status);
     return status;
@@ -977,6 +1023,7 @@ int DAL3IBIS_read_LUT2_image(dal_element **ptr_ptr_dal_LUT2, ISGRI_energy_calibr
     return status;
 }
 
+// should make flexible channels and interpolation
 int DAL3IBIS_read_LUT2(dal_element **ptr_ptr_dal_LUT2, ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration, int chatter, int status) {
     dal_dataType type;
     int pha,rt;

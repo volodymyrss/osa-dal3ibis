@@ -10,6 +10,13 @@
 /*****************************************************************************/
 
 
+#define DS_ISGR_LUT1      "ISGR-OFFS-MOD"
+#define DS_ISGR_LUT2      "ISGR-RISE-MOD"
+#define DS_ISGR_L2RE      "ISGR-L2RE-MOD"
+#define DS_ISGR_MCEC      "ISGR-MCEC-MOD"
+#define DS_ISGR_EFFC      "ISGR-EFFC-MOD"
+
+
 #define N_MCE 8
 #define N_LT 16
 #define ISGRI_N_PIXEL_Y 128
@@ -106,10 +113,10 @@ typedef struct ISGRI_events_struct {
     long       numEvents;
 
     OBTime     obtStart;
-    OBTime     obtEnd;
+    OBTime     obtStop;
 
     double     ijdStart;
-    double     ijdEnd;
+    double     ijdStop;
 
     DAL3_Word *isgriPha;
     DAL3_Byte *riseTime;
@@ -156,13 +163,30 @@ int DAL3IBISGetISGRIEfficiency(
 
 int DAL3IBIS_MceIsgriHkCal(dal_element *workGRP,
         OBTime       obtStart,
-        OBTime       obtEnd,
+        OBTime       obtStop,
         double       meanT[8],
         double       meanBias[8],
         int          chatter,
         int          status);
 
 int print_error(int status);
+
+typedef int (*functype_open_DS)(char *, dal_element **, int , int);
+typedef int (*functype_read_DS)(dal_element **, void *, int , int);
+
+
+int DAL3IBIS_open_LUT1(char *dol_LUT1, dal_element **ptr_ptr_dal_LUT1, int chatter,int status);
+int DAL3IBIS_open_LUT2(char *dol_LUT2, dal_element **ptr_dal_LUT2, int chatter, int status);
+//int DAL3IBIS_open_LUT2_image(char *dol_LUT2, dal_element **ptr_dal_LUT2, int chatter, int status;
+int DAL3IBIS_open_L2RE(char *dol_L2RE, dal_element **ptr_dal_L2RE, int chatter, int status);
+int DAL3IBIS_open_MCEC(char *dol_MCEC, dal_element **ptr_dal_MCEC, int chatter, int status);
+int DAL3IBIS_open_EFFC(char *dol_EFFC, dal_element **ptr_dal_EFFC, int chatter, int status);
+int DAL3IBIS_read_LUT1(dal_element **ptr_dal_LUT1, ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration, int chatter, int status);
+//int DAL3IBIS_read_LUT2_image(dal_element **ptr_ptr_dal_LUT2, ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration, int chatter, int status);
+int DAL3IBIS_read_LUT2(dal_element **ptr_ptr_dal_LUT2, ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration, int chatter, int status);
+int DAL3IBIS_read_L2RE(dal_element **ptr_ptr_dal_L2RE, ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration, int chatter, int status);
+int DAL3IBIS_read_MCEC(dal_element **ptr_ptr_dal_MCEC, ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration, int chatter, int status);
+int DAL3IBIS_read_EFFC(dal_element **ptr_ptr_dal_EFFC, ISGRI_efficiency_struct *ptr_ISGRI_efficiency, int chatter, int status);
 
 #define TRY_BLOCK_BEGIN  do { 
 #define TRY_BLOCK_END } while(0);

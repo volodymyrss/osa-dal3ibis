@@ -103,15 +103,16 @@ int main(int arg, char *argv[]) {
       ISGRI_events_struct ISGRI_events;
       ISGRI_energy_calibration_struct ISGRI_energy_calibration;
 
+
       TRY( DAL3IBIS_read_ISGRI_events(DAL_DS,&ISGRI_events,1,chatter,status), 0, "reading ISGRI events"); 
       TRY( DAL3IBIS_init_ISGRI_energy_calibration(&ISGRI_energy_calibration,status), status, "initializing ISGRI energy calibration");
 
-      TRY( DAL3IBIS_populate_newest_LUT1(&ISGRI_events,&ISGRI_energy_calibration,chatter,status), status, "loading LUT1" );
+      TRY( DAL3IBIS_populate_newest_DS(&ISGRI_events, &ISGRI_energy_calibration, DS_ISGR_LUT1, &DAL3IBIS_open_LUT1, &DAL3IBIS_read_LUT1,chatter,status), status, "reading LUT1" );
       TRY( DAL3IBIS_correct_LUT1_for_temperature_bias(DAL_DS,&ISGRI_energy_calibration,&ISGRI_events,chatter,status), status, "correcting for LUT1 temperature bias");
       
-      TRY( DAL3IBIS_populate_newest_MCEC(&ISGRI_events,&ISGRI_energy_calibration,chatter,status), status, "loading MCE evolution correction");
-      TRY( DAL3IBIS_populate_newest_LUT2(&ISGRI_events,&ISGRI_energy_calibration,chatter,status), status, "loading LUT2" );
-      TRY( DAL3IBIS_populate_newest_LUT2_rapid_evolution(&ISGRI_events,&ISGRI_energy_calibration,chatter,status), status, "loading LUT2 rapid evolution" );
+      TRY( DAL3IBIS_populate_newest_DS(&ISGRI_events, &ISGRI_energy_calibration, DS_ISGR_MCEC, &DAL3IBIS_open_MCEC, &DAL3IBIS_read_MCEC, chatter,status), status, "loading MCE evolution correction");
+      TRY( DAL3IBIS_populate_newest_DS(&ISGRI_events, &ISGRI_energy_calibration, DS_ISGR_LUT2, &DAL3IBIS_open_LUT2, &DAL3IBIS_read_LUT2, chatter,status), status, "loading LUT2" );
+      TRY( DAL3IBIS_populate_newest_DS(&ISGRI_events, &ISGRI_energy_calibration, DS_ISGR_L2RE, &DAL3IBIS_open_L2RE, &DAL3IBIS_read_L2RE, chatter,status), status, "loading LUT2 rapid evolution" );
       
       TRY( DAL3IBIS_reconstruct_ISGRI_energies(&ISGRI_energy_calibration,&ISGRI_events,chatter,status), status, "reconstructing energies");
 
