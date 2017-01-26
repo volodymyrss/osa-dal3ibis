@@ -17,7 +17,7 @@ f=pyfits.open("test_ic/isgr_mcec_mod.fits")
 f[1].data=zeros(8,dtype=f[1].data.dtype)
 f[1].data['MCE']=arange(8)
 f[1].data['PHA_OFFSET']=0
-f[1].data['PHA_GAIN']=1
+f[1].data['PHA_GAIN']=1.
 f[1].data['PHA_GAIN2']=0
 f[1].data['RT_OFFSET']=0
 f[1].data['RT_GAIN']=1

@@ -4,17 +4,21 @@ from ddosa import remove_withtemplate
 import os
 from numpy import *
 
-infn="/sps/integral/data/reduced/ddcache//byrev/0239/ISGRI_RISE_MOD.v0//2e84304c/isgr_rise_mod_0239.fits.gz"
-
-f=pyfits.open(infn)
-
-outfn="/sps/integral/data/ic/ic_snapshot_20140321/ic/ibis/mod/"+f[1].header['FILENAME']
-
-f.writeto(outfn,clobber=True)
-
 listfn="isgr_rise_mod_list.txt"
+listf=open(listfn,"w")
 
-open(listfn,"w").write(outfn+"\n")
+for rev in [239,665,1516]:
+    infn="/sps/integral/data/reduced/ddcache//byrev/%.4i/ISGRI_RISE_MOD.v0//2e84304c/isgr_rise_mod_%.4i.fits.gz"%(rev,rev)
+    f=pyfits.open(infn)
+
+    outfn="/sps/integral/data/ic/ic_snapshot_20140321/ic/ibis/mod/"+f[1].header['FILENAME']
+
+    f.writeto(outfn,clobber=True)
+
+    listf.write(outfn+"\n")
+
+
+listf.close()
 
 da=pilton.heatool("txt2idx")
 da['index']="/sps/integral/data/ic/ic_snapshot_20140321/idx/ic/ISGR-RISE-MOD-IDX.fits"

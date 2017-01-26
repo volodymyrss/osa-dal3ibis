@@ -30,7 +30,7 @@
 #define KEY_DEF_BIAS      -120.0 
 #define KEY_DEF_TEMP        -8.0    /* default when HK1 missing */
 
-#define DS_ISGR_HK   "IBIS-DPE.-CNV"
+#define DS_ISGR_HK        "IBIS-DPE.-CNV"
 #define DS_ISGR_RAW       "ISGR-EVTS-ALL"
 #define DS_ISGR_LUT1      "ISGR-OFFS-MOD"
 #define DS_ISGR_LUT2      "ISGR-RISE-MOD"
@@ -39,6 +39,8 @@
 #define DS_ISGR_EFFC      "ISGR-EFFC-MOD"
 #define DS_PHG2           "ISGR-GAIN-MOD"
 #define DS_PHO2           "ISGR-OFF2-MOD"
+#define DS_PICS_GO        "PICS-ENER-MOD"
+
 
 //#define KEY_COL_OUT  "ISGRI_PI"
 #define KEY_MCE_BIAS "I0E_MCDTE_MBIAS"
@@ -56,6 +58,15 @@
 #define I_ISGR_ERR_ISGR_OUT_COR   -122054
 #define I_ISGR_ERR_IBIS_IREM_BAD  -122055
 #define I_ISGR_ERR_ISGR_PHGO2_BAD -122056
+
+#define I_COMP_SCA_ERR_MEMORY              -142050
+#define I_COMP_SCA_ERR_BAD_INPUT           -142051
+#define I_COMP_SCA_ERR_ISGR_OFFS_BAD       -142052
+#define I_COMP_SCA_ERR_ISGR_RISE_BAD       -142053
+#define I_COMP_SCA_ERR_PICS_ENER_BAD       -142054
+#define I_COMP_SCA_ERR_COMP_OUT_COR        -142055
+#define I_COMP_SCA_ERR_IBIS_IREM_BAD       -142056
+#define I_COMP_SCA_ERR_ISGR_PHGO2_BAD      -142057
 
 
 /// this is not right!
@@ -79,7 +90,7 @@ double slopeMCE[8]={-1.8,-2.0,-2.3,-2.7,-0.5,-2.4,-0.8,-0.5} ;
 int DAL3IBIS_correct_LUT1_for_temperature_bias(
         dal_element *workGRP,
         ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration,
-        ISGRI_events_struct *ptr_ISGRI_events,
+        IBIS_events_struct *ptr_IBIS_events,
         int chatter,
         int status) {
 
@@ -92,7 +103,7 @@ int DAL3IBIS_correct_LUT1_for_temperature_bias(
     char logstr_rt_offset[DAL_BIG_STRING];
 
     double meanTemp[8], meanBias[8];
-    status=DAL3IBIS_MceIsgriHkCal(workGRP,ptr_ISGRI_events->obtStart,ptr_ISGRI_events->obtStop,meanTemp,meanBias,chatter,status);
+    status=DAL3IBIS_MceIsgriHkCal(workGRP,ptr_IBIS_events->obtStart,ptr_IBIS_events->obtStop,meanTemp,meanBias,chatter,status);
 
     sprintf(logstr_pha_gain,  "Bias-Temperature MCE PHA gain  ");
     sprintf(logstr_pha_offset,"                 MCE PHA offset");
@@ -124,7 +135,7 @@ int DAL3IBIS_correct_LUT1_for_temperature_bias(
         for (i_z=0;i_z<128;i_z++)
         {
             pixelNo = yz_to_pixelNo(i_y,i_z);
-            mce     = yz_to_mce(i_y,i_y);
+            mce     = yz_to_mce(i_y,i_z);
 
             ptr_ISGRI_energy_calibration->LUT1.pha_gain[i_y][i_z]*pow(meanTemp[mce],-1.11)*pow(meanBias[mce],-0.0832);
             ptr_ISGRI_energy_calibration->LUT1.pha_offset[i_y][i_z]*pow(meanTemp[mce],slopeMCE[mce])*pow(meanBias[mce],0.0288);
@@ -459,6 +470,7 @@ inline int DAL3IBIS_reconstruct_ISGRI_energy(
     double pha;
 
     short irt;
+    short mce;
     int ipha;
     int ipha2;
 
@@ -478,6 +490,15 @@ inline int DAL3IBIS_reconstruct_ISGRI_energy(
 
     rt = rt * ptr_ISGRI_energy_calibration->LUT1.rt_gain[isgriY][isgriZ] + ptr_ISGRI_energy_calibration->LUT1.rt_offset[isgriY][isgriZ];
     pha = isgriPha * ptr_ISGRI_energy_calibration->LUT1.pha_gain[isgriY][isgriZ] + ptr_ISGRI_energy_calibration->LUT1.pha_offset[isgriY][isgriZ];
+
+    // MCE correctio
+    
+    mce     = yz_to_mce(isgriY,isgriZ);
+
+    rt = rt * ptr_ISGRI_energy_calibration->MCE_correction.rt_gain[mce] + ptr_ISGRI_energy_calibration->MCE_correction.rt_offset[mce];
+    pha = pha * ptr_ISGRI_energy_calibration->MCE_correction.pha_gain[mce] 
+            + ptr_ISGRI_energy_calibration->MCE_correction.pha_offset[mce] 
+            + rt * ptr_ISGRI_energy_calibration->MCE_correction.rt_pha_cross_gain[mce];
 
     // LUT2 rapid here TODO
 
@@ -511,42 +532,130 @@ inline int DAL3IBIS_reconstruct_ISGRI_energy(
     ptr_infoEvt->good++;
 }
 
-int DAL3IBIS_reconstruct_ISGRI_energies(
+
+inline int DAL3IBIS_reconstruct_PICsIT_energy(
+        long picsitPha,
+        short picsitY,
+        short picsitZ,
+        
+        float *ptr_picsit_energy,
+
+        PICsIT_energy_calibration_struct *ptr_PICsIT_energy_calibration,
+
+        infoEvt_struct *ptr_infoEvt,
+        int status
+        ) {
+
+    double pha;
+
+    int ipha;
+    
+    pha=4. + (double)picsitPha+DAL3GENrandomDoubleX1();
+
+    int pixelNo =  64*(int)picsitY + (int)picsitZ;
+
+    *ptr_picsit_energy = PICSIT_GAIN * ptr_PICsIT_energy_calibration->gain_offset[0][pixelNo]*pha
+                       + PICSIT_OFFSET + ptr_PICsIT_energy_calibration->gain_offset[1][pixelNo];
+
+    //no bad!
+
+    ptr_infoEvt->good++;
+}
+
+int DAL3IBIS_reconstruct_Compton_energies(
         ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration,
-        ISGRI_events_struct *ptr_ISGRI_events,
+        PICsIT_energy_calibration_struct *ptr_PICsIT_energy_calibration,
+        IBIS_events_struct *ptr_IBIS_events,
         int chatter,
         int status
         ) {
 
     long i;
 
-    for (i=0; i<ptr_ISGRI_events->numEvents; i++) {
+    if (ptr_IBIS_events->event_kind != COMPTON_SGLE && ptr_IBIS_events->event_kind != COMPTON_MULE) 
+        return -1;
+
+    for (i=0; i<ptr_IBIS_events->numEvents; i++) {
 
         DAL3IBIS_reconstruct_ISGRI_energy(
-                ptr_ISGRI_events->isgriPha[i],
-                ptr_ISGRI_events->riseTime[i],
-                ptr_ISGRI_events->isgriY[i],
-                ptr_ISGRI_events->isgriZ[i],
+                ptr_IBIS_events->isgriPha[i],
+                ptr_IBIS_events->riseTime[i],
+                ptr_IBIS_events->isgriY[i],
+                ptr_IBIS_events->isgriZ[i],
 
-                &ptr_ISGRI_events->isgri_energy[i],
-                &ptr_ISGRI_events->isgri_pi[i],
+                &ptr_IBIS_events->isgri_energy[i],
+                &ptr_IBIS_events->isgri_pi[i],
 
                 ptr_ISGRI_energy_calibration,
 
-                &ptr_ISGRI_events->infoEvt,
+                &ptr_IBIS_events->infoEvt,
+                status
+                );
+        
+        DAL3IBIS_reconstruct_PICsIT_energy(
+                ptr_IBIS_events->picsitPha[i],
+                ptr_IBIS_events->picsitY[i],
+                ptr_IBIS_events->picsitZ[i],
+
+                &ptr_IBIS_events->picsit_energy[i],
+
+                ptr_PICsIT_energy_calibration,
+
+                &ptr_IBIS_events->infoEvt,
                 status
                 );
     }
 
 
     if (chatter>2) {
-        RILlogMessage(NULL, Log_0, "           good: %li",ptr_ISGRI_events->infoEvt.good);
-        RILlogMessage(NULL, Log_0, "   bad pixel YZ: %li",ptr_ISGRI_events->infoEvt.bad_pixel_yz);
-        RILlogMessage(NULL, Log_0, "     RT too low: %li",ptr_ISGRI_events->infoEvt.rt_too_low);
-        RILlogMessage(NULL, Log_0, "    RT too high: %li",ptr_ISGRI_events->infoEvt.rt_too_high);
-        RILlogMessage(NULL, Log_0, "    PHA too low: %li",ptr_ISGRI_events->infoEvt.pha_too_low);
-        RILlogMessage(NULL, Log_0, "   PHA too high: %li",ptr_ISGRI_events->infoEvt.pha_too_high);
-        RILlogMessage(NULL, Log_0, "negative energy: %li",ptr_ISGRI_events->infoEvt.negative_energy);
+        RILlogMessage(NULL, Log_0, "           good: %li",ptr_IBIS_events->infoEvt.good);
+        RILlogMessage(NULL, Log_0, "   bad pixel YZ: %li",ptr_IBIS_events->infoEvt.bad_pixel_yz);
+        RILlogMessage(NULL, Log_0, "     RT too low: %li",ptr_IBIS_events->infoEvt.rt_too_low);
+        RILlogMessage(NULL, Log_0, "    RT too high: %li",ptr_IBIS_events->infoEvt.rt_too_high);
+        RILlogMessage(NULL, Log_0, "    PHA too low: %li",ptr_IBIS_events->infoEvt.pha_too_low);
+        RILlogMessage(NULL, Log_0, "   PHA too high: %li",ptr_IBIS_events->infoEvt.pha_too_high);
+        RILlogMessage(NULL, Log_0, "negative energy: %li",ptr_IBIS_events->infoEvt.negative_energy);
+    };
+
+    return status;
+};
+
+int DAL3IBIS_reconstruct_ISGRI_energies(
+        ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration,
+        IBIS_events_struct *ptr_IBIS_events,
+        int chatter,
+        int status
+        ) {
+
+    long i;
+
+    for (i=0; i<ptr_IBIS_events->numEvents; i++) {
+
+        DAL3IBIS_reconstruct_ISGRI_energy(
+                ptr_IBIS_events->isgriPha[i],
+                ptr_IBIS_events->riseTime[i],
+                ptr_IBIS_events->isgriY[i],
+                ptr_IBIS_events->isgriZ[i],
+
+                &ptr_IBIS_events->isgri_energy[i],
+                &ptr_IBIS_events->isgri_pi[i],
+
+                ptr_ISGRI_energy_calibration,
+
+                &ptr_IBIS_events->infoEvt,
+                status
+                );
+    }
+
+
+    if (chatter>2) {
+        RILlogMessage(NULL, Log_0, "           good: %li",ptr_IBIS_events->infoEvt.good);
+        RILlogMessage(NULL, Log_0, "   bad pixel YZ: %li",ptr_IBIS_events->infoEvt.bad_pixel_yz);
+        RILlogMessage(NULL, Log_0, "     RT too low: %li",ptr_IBIS_events->infoEvt.rt_too_low);
+        RILlogMessage(NULL, Log_0, "    RT too high: %li",ptr_IBIS_events->infoEvt.rt_too_high);
+        RILlogMessage(NULL, Log_0, "    PHA too low: %li",ptr_IBIS_events->infoEvt.pha_too_low);
+        RILlogMessage(NULL, Log_0, "   PHA too high: %li",ptr_IBIS_events->infoEvt.pha_too_high);
+        RILlogMessage(NULL, Log_0, "negative energy: %li",ptr_IBIS_events->infoEvt.negative_energy);
     };
 
     return status;
@@ -603,27 +712,40 @@ int DAL3IBIS_init_ISGRI_energy_calibration(ISGRI_energy_calibration_struct *ptr_
 }
 
 
+int DAL3IBIS_init_PICsIT_energy_calibration(PICsIT_energy_calibration_struct *ptr_PICsIT_energy_calibration,int status) {
+    int i;
 
-int DAL3IBIS_read_ISGRI_events(dal_element *workGRP,
-                               ISGRI_events_struct *ptr_ISGRI_events,
+    for (i=0; i<PICSIT_GO_N_DATA; i++) {
+        status=DAL_GC_allocateDataBuffer((void **)&(ptr_PICsIT_energy_calibration->gain_offset[i]), PICSIT_N_PIX*sizeof(float), status,"PICsIT GO");
+    }
+
+
+    return status;
+}
+
+int DAL3IBIS_read_IBIS_events(dal_element *workGRP,
+                               IBIS_type event_kind,
+                               IBIS_events_struct *ptr_IBIS_events,
                                int gti,
                                int chatter,
-                               int status)
+                               int status
+                               )
 {
-    ptr_ISGRI_events->obtStart=DAL3_NO_OBTIME;
-    ptr_ISGRI_events->obtStop=DAL3_NO_OBTIME;
-    ptr_ISGRI_events->numEvents=0;
-    ptr_ISGRI_events->infoEvt.good=0;
-    ptr_ISGRI_events->infoEvt.bad_pixel_yz=0;
-    ptr_ISGRI_events->infoEvt.rt_too_low=0;
-    ptr_ISGRI_events->infoEvt.rt_too_high=0;
-    ptr_ISGRI_events->infoEvt.pha_too_low=0;
-    ptr_ISGRI_events->infoEvt.pha_too_high=0;
-    ptr_ISGRI_events->infoEvt.negative_energy=0;
-
+    ptr_IBIS_events->obtStart=DAL3_NO_OBTIME;
+    ptr_IBIS_events->obtStop=DAL3_NO_OBTIME;
+    ptr_IBIS_events->numEvents=0;
+    ptr_IBIS_events->infoEvt.good=0;
+    ptr_IBIS_events->infoEvt.bad_pixel_yz=0;
+    ptr_IBIS_events->infoEvt.rt_too_low=0;
+    ptr_IBIS_events->infoEvt.rt_too_high=0;
+    ptr_IBIS_events->infoEvt.pha_too_low=0;
+    ptr_IBIS_events->infoEvt.pha_too_high=0;
+    ptr_IBIS_events->infoEvt.negative_energy=0;
+    ptr_IBIS_events->event_kind=event_kind;
 
   short  selected=0;
   long   buffSize;
+  long int numEvents;
 
   dal_dataType type;
   ISDCLevel    myLevel;
@@ -632,9 +754,10 @@ int DAL3IBIS_read_ISGRI_events(dal_element *workGRP,
 
     selected=1;
     if (gti) myLevel=PRP;  else myLevel=RAW;
-    status=DAL3IBISselectEvents(workGRP, ISGRI_EVTS, myLevel, gti,
-                                &ptr_ISGRI_events->obtStart, &ptr_ISGRI_events->obtStop, NULL, status);
-    status=DAL3IBISgetNumEvents(&ptr_ISGRI_events->numEvents, status);
+
+    status=DAL3IBISselectEvents(workGRP, event_kind, myLevel, gti,
+                                &ptr_IBIS_events->obtStart, &ptr_IBIS_events->obtStop, NULL, status);
+    status=DAL3IBISgetNumEvents(&ptr_IBIS_events->numEvents, status);
     
     if (status != ISDC_OK) {
       RILlogMessage(NULL, Error_1, "selecting events: %i", status);
@@ -646,7 +769,7 @@ int DAL3IBIS_read_ISGRI_events(dal_element *workGRP,
       RILlogMessage(NULL, Warning_1, "Reverting from status=%d to ISDC_OK", status);
       RILlogMessage(NULL, Warning_1, "NO event selected. Execution stopped.");
     //  status=ISDC_OK;
-      ptr_ISGRI_events->numEvents=0l;
+      ptr_IBIS_events->numEvents=0l;
       break;
     }
     else if (status != ISDC_OK) {
@@ -655,35 +778,38 @@ int DAL3IBIS_read_ISGRI_events(dal_element *workGRP,
       break;
     }
     /* test useful when: dal3gen>5.0.0 or RAW <> PRP (0 rows, useGTI=yes) */
-    if (ptr_ISGRI_events->numEvents == 0l) {
+    if (ptr_IBIS_events->numEvents == 0l) {
       RILlogMessage(NULL, Warning_1, "NO event selected. Execution stopped.");
       break;
     }
     if (chatter > 0)
-      RILlogMessage(NULL, Log_2, "Number of selected events: %9ld", ptr_ISGRI_events->numEvents);
+      RILlogMessage(NULL, Log_2, "Number of selected events: %9ld", ptr_IBIS_events->numEvents);
 
   /*#################################################################*/
   /* Allocate memory buffers */
   /*#################################################################*/
-    ptr_ISGRI_events->isgriPha=NULL;
-    ptr_ISGRI_events->riseTime=NULL;
-    ptr_ISGRI_events->isgriY=NULL;
-    ptr_ISGRI_events->isgriZ=NULL;
-    
-    ptr_ISGRI_events->isgri_energy=NULL;
-    ptr_ISGRI_events->isgri_pi=NULL;
 
-    buffSize= ptr_ISGRI_events->numEvents * sizeof(DAL3_Word);
-    status=DAL_GC_allocateDataBuffer((void **)&(ptr_ISGRI_events->isgriPha), buffSize, status,"ISGRI events PHA");
-    buffSize= ptr_ISGRI_events->numEvents * sizeof(DAL3_Byte);
-    status=DAL_GC_allocateDataBuffer((void **)&(ptr_ISGRI_events->riseTime), buffSize, status,"ISGRI events RT");
-    status=DAL_GC_allocateDataBuffer((void **)&(ptr_ISGRI_events->isgriY),   buffSize, status,"ISGRI events Y");
-    status=DAL_GC_allocateDataBuffer((void **)&(ptr_ISGRI_events->isgriZ),   buffSize, status,"ISGRI events Z");
+    buffSize= ptr_IBIS_events->numEvents * sizeof(DAL3_Word);
+    status=DAL_GC_allocateDataBuffer((void **)&(ptr_IBIS_events->isgriPha), buffSize, status,"ISGRI events PHA");
+    buffSize= ptr_IBIS_events->numEvents * sizeof(DAL3_Byte);
+    status=DAL_GC_allocateDataBuffer((void **)&(ptr_IBIS_events->riseTime), buffSize, status,"ISGRI events RT");
+    status=DAL_GC_allocateDataBuffer((void **)&(ptr_IBIS_events->isgriY),   buffSize, status,"ISGRI events Y");
+    status=DAL_GC_allocateDataBuffer((void **)&(ptr_IBIS_events->isgriZ),   buffSize, status,"ISGRI events Z");
+
+    if (event_kind == COMPTON_SGLE || event_kind == COMPTON_MULE ) {
+        status=DAL_GC_allocateDataBuffer((void **)&(ptr_IBIS_events->picsitPha),   buffSize, status,"PICsIT events PHA");
+        status=DAL_GC_allocateDataBuffer((void **)&(ptr_IBIS_events->picsitY),   buffSize, status,"PICsIT events Y");
+        status=DAL_GC_allocateDataBuffer((void **)&(ptr_IBIS_events->picsitZ),   buffSize, status,"PICsIT events Z");
+
+        buffSize= ptr_IBIS_events->numEvents * sizeof(float);
+        status=DAL_GC_allocateDataBuffer((void **)&(ptr_IBIS_events->picsit_energy),   buffSize, status,"PICsIT events ENERGY");
+    }
+
+    buffSize= ptr_IBIS_events->numEvents * sizeof(float);
+    status=DAL_GC_allocateDataBuffer((void **)&(ptr_IBIS_events->isgri_energy),   buffSize, status,"ISGRI events ENERGY");
+    buffSize= ptr_IBIS_events->numEvents * sizeof(DAL3_Byte);
+    status=DAL_GC_allocateDataBuffer((void **)&(ptr_IBIS_events->isgri_pi),   buffSize, status,"ISGRI events PI");
     
-    buffSize= ptr_ISGRI_events->numEvents * sizeof(float);
-    status=DAL_GC_allocateDataBuffer((void **)&(ptr_ISGRI_events->isgri_energy),   buffSize, status,"ISGRI events ENERGY");
-    buffSize= ptr_ISGRI_events->numEvents * sizeof(DAL3_Byte);
-    status=DAL_GC_allocateDataBuffer((void **)&(ptr_ISGRI_events->isgri_pi),   buffSize, status,"ISGRI events PI");
 
     if (status != ISDC_OK) {
       RILlogMessage(NULL, Error_2, "Cannot allocate buffers for input/output data");
@@ -694,21 +820,32 @@ int DAL3IBIS_read_ISGRI_events(dal_element *workGRP,
   /* Read RAW data */
   /*#################################################################*/
     type=DAL_USHORT;
-    status=DAL3IBISgetEvents(ISGRI_PHA, &type, (void *)ptr_ISGRI_events->isgriPha, status);
+    status=DAL3IBISgetEvents(ISGRI_PHA, &type, (void *)ptr_IBIS_events->isgriPha, status);
     type=DAL_BYTE;
-    status=DAL3IBISgetEvents(RISE_TIME, &type, (void *)ptr_ISGRI_events->riseTime, status);
+    status=DAL3IBISgetEvents(RISE_TIME, &type, (void *)ptr_IBIS_events->riseTime, status);
     type=DAL_BYTE;
-    status=DAL3IBISgetEvents(ISGRI_Y,   &type, (void *)ptr_ISGRI_events->isgriY,   status);
+    status=DAL3IBISgetEvents(ISGRI_Y,   &type, (void *)ptr_IBIS_events->isgriY,   status);
     type=DAL_BYTE;
-    status=DAL3IBISgetEvents(ISGRI_Z,   &type, (void *)ptr_ISGRI_events->isgriZ,   status);
+    status=DAL3IBISgetEvents(ISGRI_Z,   &type, (void *)ptr_IBIS_events->isgriZ,   status);
+
+    if (event_kind == COMPTON_SGLE || event_kind == COMPTON_MULE ) {
+        type=DAL_BYTE;
+        status=DAL3IBISgetEvents(PICSIT_PHA,&type, (void *)*ptr_IBIS_events->picsitPha, status);
+        type=DAL_BYTE;
+        status=DAL3IBISgetEvents(PICSIT_Y,  &type, (void *)*ptr_IBIS_events->picsitY,   status);
+        type=DAL_BYTE;
+        status=DAL3IBISgetEvents(PICSIT_Z,  &type, (void *)*ptr_IBIS_events->picsitZ,   status);
+    }
+
+
     if (gti) {
         type=DAL3_OBT;
-        status=DAL3IBISgetEventsBins(OB_TIME, &type, 1,1, &ptr_ISGRI_events->obtStart, status);
-        buffSize= ptr_ISGRI_events->numEvents;
-        status=DAL3IBISgetEventsBins(OB_TIME, &type, buffSize,buffSize, &ptr_ISGRI_events->obtStop, status);
+        status=DAL3IBISgetEventsBins(OB_TIME, &type, 1,1, &ptr_IBIS_events->obtStart, status);
+        buffSize= ptr_IBIS_events->numEvents;
+        status=DAL3IBISgetEventsBins(OB_TIME, &type, buffSize,buffSize, &ptr_IBIS_events->obtStop, status);
 
         double ijds[2];
-        OBTime obts[2]={ptr_ISGRI_events->obtStart,ptr_ISGRI_events->obtStop};
+        OBTime obts[2]={ptr_IBIS_events->obtStart,ptr_IBIS_events->obtStop};
         status=DAL3AUXconvertOBT2IJD(workGRP, TCOR_ANY, 2, (OBTime*)obts, (double*)ijds, status);
 
         if (status != ISDC_OK) {
@@ -718,24 +855,24 @@ int DAL3IBIS_read_ISGRI_events(dal_element *workGRP,
           
         RILlogMessage(NULL, Log_1, "IJD: %.15lg - %.15lg; %.5lg s", ijds[0], ijds[1],(ijds[1]-ijds[0])*24*3600);
 
-        ptr_ISGRI_events->ijdStart=ijds[0];
-        ptr_ISGRI_events->ijdStop=ijds[1];
+        ptr_IBIS_events->ijdStart=ijds[0];
+        ptr_IBIS_events->ijdStop=ijds[1];
 
         if ((chatter > 2) && (gti))
-            RILlogMessage(NULL, Log_0, "OBT range: %020lld , %020lld", ptr_ISGRI_events->obtStart, ptr_ISGRI_events->obtStop);
+            RILlogMessage(NULL, Log_0, "OBT range: %020lld , %020lld", ptr_IBIS_events->obtStart, ptr_IBIS_events->obtStop);
 
-        if ((ptr_ISGRI_events->obtStart < 0) || (ptr_ISGRI_events->obtStop < 0)) {
+        if ((ptr_IBIS_events->obtStart < 0) || (ptr_IBIS_events->obtStop < 0)) {
             if (gti) {
                 RILlogMessage(NULL, Warning_1, "At least one OBT limit is negative.");
                 RILlogMessage(NULL, Warning_1, "Using all ScW to calculate mean bias and temperature.");
             }
-            ptr_ISGRI_events->obtStart=DAL3_NO_OBTIME;
-            ptr_ISGRI_events->obtStop=DAL3_NO_OBTIME;
+            ptr_IBIS_events->obtStart=DAL3_NO_OBTIME;
+            ptr_IBIS_events->obtStop=DAL3_NO_OBTIME;
         }
     }
     else {
-      ptr_ISGRI_events->obtStart=DAL3_NO_OBTIME;
-      ptr_ISGRI_events->obtStop=DAL3_NO_OBTIME;
+      ptr_IBIS_events->obtStart=DAL3_NO_OBTIME;
+      ptr_IBIS_events->obtStop=DAL3_NO_OBTIME;
     }
     if (status != ISDC_OK) {
       RILlogMessage(NULL, Error_2, "Cannot get input data");
@@ -748,36 +885,36 @@ int DAL3IBIS_read_ISGRI_events(dal_element *workGRP,
   if (status == ISDC_OK)
     RILlogMessage(NULL, Log_2, "ISGRI event information successfully extracted %i",status);
 
-  ptr_ISGRI_events->infoEvt.good=0;
-  ptr_ISGRI_events->infoEvt.bad_pixel_yz=0;
-  ptr_ISGRI_events->infoEvt.rt_too_low=0;
-  ptr_ISGRI_events->infoEvt.rt_too_high=0;
-  ptr_ISGRI_events->infoEvt.pha_too_low=0;
-  ptr_ISGRI_events->infoEvt.pha_too_high=0;
-  ptr_ISGRI_events->infoEvt.negative_energy=0;
+  ptr_IBIS_events->infoEvt.good=0;
+  ptr_IBIS_events->infoEvt.bad_pixel_yz=0;
+  ptr_IBIS_events->infoEvt.rt_too_low=0;
+  ptr_IBIS_events->infoEvt.rt_too_high=0;
+  ptr_IBIS_events->infoEvt.pha_too_low=0;
+  ptr_IBIS_events->infoEvt.pha_too_high=0;
+  ptr_IBIS_events->infoEvt.negative_energy=0;
 
   return status;
 }
 
-//typedef int (*populate_newest_DS)(ISGRI_events_struct*, void*, int, int);
+//typedef int (*populate_newest_DS)(IBIS_events_struct*, void*, int, int);
 /*typedef int (*functype_open_DS)(char *LUT1, dal_element **ptr_ptr_dal_LUT1, int chatter,int status);
 typedef int (*functype_read_DS)(dal_element **ptr_dal_LUT1, void *calibration_struct, int chatter, int status);*/
 
-int DAL3IBIS_populate_newest_DS(ISGRI_events_struct *ptr_ISGRI_events, void * calibration_struct, char *DS, functype_open_DS func_open_DS, functype_read_DS func_read_DS, int chatter, int status) {
+int DAL3IBIS_populate_newest_DS(IBIS_events_struct *ptr_IBIS_events, void * calibration_struct, char *DS, functype_open_DS func_open_DS, functype_read_DS func_read_DS, int chatter, int status) {
     char dol_start[DAL_MAX_STRING];
     char dol_stop[DAL_MAX_STRING];
 
     TRY_BLOCK_BEGIN
 
-        TRY( doICgetNewestDOL(DS,"",ptr_ISGRI_events->ijdStart,dol_start,status) ,-1, "searching for %s",DS);
-        TRY( doICgetNewestDOL(DS,"",ptr_ISGRI_events->ijdStop,dol_stop,status) ,-1,  "searching for %s",DS);
+        TRY( doICgetNewestDOL(DS,"",ptr_IBIS_events->ijdStart,dol_start,status) ,-1, "searching for %s",DS);
+        TRY( doICgetNewestDOL(DS,"",ptr_IBIS_events->ijdStop,dol_stop,status) ,-1,  "searching for %s",DS);
 
         if (strcmp(dol_start,dol_stop)!=0) {
             RILlogMessage(NULL,Log_0,"different DOL for start and stop: %s and %s",dol_start,dol_stop);
             return -1;
         }
 
-        RILlogMessage(NULL,Log_0,"Found %s as %s for IJD %.15lg and %.15lg",DS,dol_start,ptr_ISGRI_events->ijdStart,ptr_ISGRI_events->ijdStop);
+        RILlogMessage(NULL,Log_0,"Found %s as %s for IJD %.15lg and %.15lg",DS,dol_start,ptr_IBIS_events->ijdStart,ptr_IBIS_events->ijdStop);
         
         TRY( DAL3IBIS_populate_DS(dol_start, calibration_struct, DS, func_open_DS, func_read_DS, chatter, status), -1, "populating calibration from %s ", DS);
 
@@ -793,27 +930,6 @@ int DAL3IBIS_populate_DS(char *dol,  void * calibration_struct, char *DS, functy
     return status;
 }
     
-int DAL3IBIS_populate_newest_LUT1(ISGRI_events_struct *ptr_ISGRI_events, ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration, int chatter, int status) {
-    char dol_LUT1[DAL_MAX_STRING];
-
-    status=doICgetNewestDOL(DS_ISGR_LUT1,"",ptr_ISGRI_events->ijdStart,dol_LUT1,status);
-
-    if (status != ISDC_OK) {
-        RILlogMessage(NULL,Log_0,"NOT Found %s as %s",dol_LUT1);
-        return status;
-    }
-    RILlogMessage(NULL,Log_0,"Found %s as %s",DS_ISGR_LUT1,dol_LUT1);
-
-    status=DAL3IBIS_populate_LUT1(dol_LUT1, ptr_ISGRI_energy_calibration, chatter, status);
-    return status;
-}
-
-int DAL3IBIS_populate_LUT1(char *dol_LUT1, ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration, int chatter, int status) {
-    dal_element *ptr_dal_LUT1;
-    status=DAL3IBIS_open_LUT1(dol_LUT1,&ptr_dal_LUT1,chatter,status);
-    status=DAL3IBIS_read_LUT1(&ptr_dal_LUT1,ptr_ISGRI_energy_calibration,chatter,status);
-    return status;
-}
 
 int DAL3IBIS_open_LUT1(char *dol_LUT1, dal_element **ptr_ptr_dal_LUT1, int chatter,int status) {
     char keyVal[DAL_BIG_STRING];
@@ -910,28 +1026,6 @@ int DAL3IBIS_read_LUT1(dal_element **ptr_dal_LUT1, ISGRI_energy_calibration_stru
     return status;
 }
 
-int DAL3IBIS_populate_newest_LUT2(ISGRI_events_struct *ptr_ISGRI_events, ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration, int chatter, int status) {
-    char dol_LUT2[DAL_MAX_STRING];
-
-    status=doICgetNewestDOL(DS_ISGR_LUT2,"",ptr_ISGRI_events->ijdStart,dol_LUT2,status);
-
-    if (status != ISDC_OK) {
-        RILlogMessage(NULL,Log_0,"failed to find %s",DS_ISGR_LUT2);
-        return status;
-    }
-
-    RILlogMessage(NULL,Log_0,"Found %s as %s",DS_ISGR_LUT2,dol_LUT2);
-
-    status=DAL3IBIS_populate_LUT2(dol_LUT2, ptr_ISGRI_energy_calibration, chatter, status);
-    return status;
-}
-
-int DAL3IBIS_populate_LUT2(char *dol_LUT2, ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration, int chatter, int status) {
-    dal_element *ptr_dal_LUT2;
-    status=DAL3IBIS_open_LUT2(dol_LUT2,&ptr_dal_LUT2,chatter,status);
-    status=DAL3IBIS_read_LUT2(&ptr_dal_LUT2,ptr_ISGRI_energy_calibration,chatter,status);
-    return status;
-}
 
 int DAL3IBIS_open_LUT2(char *dol_LUT2, dal_element **ptr_dal_LUT2, int chatter, int status) {
     char keyVal[DAL_MAX_STRING];
@@ -1075,31 +1169,6 @@ int DAL3IBIS_read_LUT2(dal_element **ptr_ptr_dal_LUT2, ISGRI_energy_calibration_
 
 ////////////////////////
 
-int DAL3IBIS_populate_newest_LUT2_rapid_evolution(ISGRI_events_struct *ptr_ISGRI_events, ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration, int chatter, int status) {
-    char dol_L2RE[DAL_MAX_STRING];
-    
-    if (chatter > 3) RILlogMessage(NULL, Log_0, "ISGRI rise-time LUT2 rapid evolution reading...");
-
-    status=doICgetNewestDOL("ISGR-L2RE-MOD","",ptr_ISGRI_events->ijdStart,dol_L2RE,status);
-    
-    if (status != ISDC_OK) {
-        RILlogMessage(NULL,Error_1,"did not find ISGR-L2RE-MOD");
-        return status;
-    }
-    RILlogMessage(NULL,Log_0,"Found ISGR-L2RE-MOD as %s",dol_L2RE);
-
-    status=DAL3IBIS_populate_L2RE(dol_L2RE, ptr_ISGRI_energy_calibration, chatter, status);
-
-    return status;
-}
-
-int DAL3IBIS_populate_L2RE(char *dol_L2RE, ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration, int chatter, int status) {
-    dal_element *ptr_dal_L2RE;
-    status=DAL3IBIS_open_L2RE(dol_L2RE,&ptr_dal_L2RE,chatter,status);
-    status=DAL3IBIS_read_L2RE(&ptr_dal_L2RE,ptr_ISGRI_energy_calibration,chatter,status);
-    return status;
-}
-
 int DAL3IBIS_open_L2RE(char *dol_L2RE, dal_element **ptr_dal_L2RE, int chatter, int status) {
 
     char keyVal[DAL_MAX_STRING];
@@ -1183,39 +1252,17 @@ int DAL3IBIS_read_L2RE(dal_element **ptr_ptr_dal_L2RE, ISGRI_energy_calibration_
     return status;
 }
     
-////////////////////////
+////////////////////////////
+//
+// MCE correction open/read
+//
+////////////////////////////
 
-int DAL3IBIS_populate_newest_MCEC(ISGRI_events_struct *ptr_ISGRI_events, ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration, int chatter, int status) {
-    char dol_MCEC[DAL_MAX_STRING];
-    
-    if (chatter > 3) RILlogMessage(NULL, Log_0, "ISGRI rise-time MCE evolution reading...");
-
-    status=doICgetNewestDOL("ISGR-MCEC-MOD","",ptr_ISGRI_events->ijdStart,dol_MCEC,status);
-    
-    if (status != ISDC_OK) {
-        RILlogMessage(NULL,Error_1,"did not find ISGR-MCEC-MOD");
-        return status;
-    }
-    RILlogMessage(NULL,Log_0,"Found ISGR-MCEC-MOD as %s",dol_MCEC);
-
-    status=DAL3IBIS_populate_MCEC(dol_MCEC, ptr_ISGRI_energy_calibration, chatter, status);
-
-    return status;
-}
-
-int DAL3IBIS_populate_MCEC(char *dol_MCEC, ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration, int chatter, int status) {
-    dal_element *ptr_dal_MCEC;
-    status=DAL3IBIS_open_MCEC(dol_MCEC,&ptr_dal_MCEC,chatter,status);
-    status=DAL3IBIS_read_MCEC(&ptr_dal_MCEC,ptr_ISGRI_energy_calibration,chatter,status);
-    return status;
-}
-
-int DAL3IBIS_open_MCEC(char *dol_MCEC, dal_element **ptr_dal_MCEC, int chatter, int status) { // these are identical!!!
+int DAL3IBIS_open_MCEC(char *dol_MCEC, dal_element **ptr_dal_MCEC, int chatter, int status) { 
 
     char keyVal[DAL_MAX_STRING];
     int numRow, numCol, numAxes;
     long int dimAxes[2];  
- //   dal_dataType type;
 
     status=DAL_GC_objectOpen(dol_MCEC, ptr_dal_MCEC, status);
     status=DALelementGetName(*ptr_dal_MCEC, keyVal, status);
@@ -1230,26 +1277,6 @@ int DAL3IBIS_open_MCEC(char *dol_MCEC, dal_element **ptr_dal_MCEC, int chatter, 
                                   dol_MCEC, DS_ISGR_MCEC, keyVal);
       return status=I_ISGR_ERR_BAD_INPUT;
     }
-
-    /*
-    status=DALarrayGetStruct(*ptr_dal_LUT2, &type, &numAxes, dimAxes, status);
-    if (status != ISDC_OK) {
-      RILlogMessage(NULL, Error_2, "Cannot get the 2 sizes of array %13s. Status=%d",
-                                  DS_ISGR_LUT2, status);
-      return status=I_ISGR_ERR_ISGR_RISE_BAD;
-    }
-
-    if (numAxes != ISGRI_DIM_LUT2) {
-      RILlogMessage(NULL, Error_2, "%13s image must be a 2D array.", DS_ISGR_LUT2);
-      return status=I_ISGR_ERR_ISGR_RISE_BAD;
-    }
-
-    if (  (dimAxes[0]!=ISGRI_LUT2_N_RT) || (dimAxes[1]!=ISGRI_LUT2_N_PHA)) {
-      RILlogMessage(NULL, Error_2, "%13s array dimensions must be: %d*%d not %d*%d",
-                                  DS_ISGR_LUT2, ISGRI_LUT2_N_RT, ISGRI_LUT2_N_PHA, dimAxes[0], dimAxes[1]);
-      status=I_ISGR_ERR_ISGR_RISE_BAD;
-      return status;
-    }*/
 
     return status;
 }
@@ -1278,38 +1305,48 @@ int DAL3IBIS_read_MCEC(dal_element **ptr_ptr_dal_MCEC, ISGRI_energy_calibration_
                             (void *)(ptr_ISGRI_energy_calibration->MCE_correction.rt_offset), status);
     status=DALtableGetCol(*ptr_ptr_dal_MCEC, NULL, 6, &type, NULL,
                             (void *)(ptr_ISGRI_energy_calibration->MCE_correction.rt_gain), status);
+
+    int mce;
+    char logstr_pha_gain[DAL_BIG_STRING];
+    char logstr_pha_offset[DAL_BIG_STRING];
+    char logstr_rt_gain[DAL_BIG_STRING];
+    char logstr_rt_offset[DAL_BIG_STRING];
+    
+    sprintf(logstr_pha_gain,  "MCE correction PHA gain  ");
+    sprintf(logstr_pha_offset,"               PHA offset");
+    sprintf(logstr_rt_gain,   "               RT  gain  ");
+    sprintf(logstr_rt_offset, "               RT  offset");
+
+    for (mce=0;mce<8;mce++) {
+        sprintf(strchr(logstr_pha_gain, '\0'),
+                " %5.3lf",ptr_ISGRI_energy_calibration->MCE_correction.pha_gain[mce]);
+
+        sprintf(logstr_pha_offset+strlen(logstr_pha_offset),
+                " %5.3lf",ptr_ISGRI_energy_calibration->MCE_correction.pha_offset[mce]);
+
+        sprintf(logstr_rt_gain+strlen(logstr_rt_gain),
+                " %5.3lf",ptr_ISGRI_energy_calibration->MCE_correction.rt_gain[mce]);
+        
+        sprintf(logstr_rt_offset+strlen(logstr_rt_offset),
+                " %5.3lf",ptr_ISGRI_energy_calibration->MCE_correction.rt_offset[mce]);
+        
+    }
+
+
+    if (chatter>3) {
+        RILlogMessage(NULL,Log_0,"%s",logstr_pha_gain);
+        RILlogMessage(NULL,Log_0,"%s",logstr_pha_offset);
+        RILlogMessage(NULL,Log_0,"%s",logstr_rt_gain);
+        RILlogMessage(NULL,Log_0,"%s",logstr_rt_offset);
+    }
+
     
     return status;
 }
     
 ////////////////////////
 
-int DAL3IBIS_populate_newest_EFFC(ISGRI_events_struct *ptr_ISGRI_events, ISGRI_efficiency_struct *ptr_ISGRI_efficiency, int chatter, int status) {
-    char dol_EFFC[DAL_MAX_STRING];
-    
-    if (chatter > 3) RILlogMessage(NULL, Log_0, "ISGRI efficiency correction reading...");
-
-    status=doICgetNewestDOL("ISGR-EFFC-MOD","",ptr_ISGRI_events->ijdStart,dol_EFFC,status);
-    
-    if (status != ISDC_OK) {
-        RILlogMessage(NULL,Error_1,"did not find ISGR-EFFC-MOD");
-        return status;
-    }
-    RILlogMessage(NULL,Log_0,"Found ISGR-EFFC-MOD as %s",dol_EFFC);
-
-    status=DAL3IBIS_populate_EFFC(dol_EFFC, ptr_ISGRI_efficiency, chatter, status);
-
-    return status;
-}
-
-int DAL3IBIS_populate_EFFC(char *dol_EFFC, ISGRI_efficiency_struct *ptr_ISGRI_efficiency, int chatter, int status) {
-    dal_element *ptr_dal_EFFC;
-    status=DAL3IBIS_open_EFFC(dol_EFFC,&ptr_dal_EFFC,chatter,status);
-    status=DAL3IBIS_read_EFFC(&ptr_dal_EFFC,ptr_ISGRI_efficiency,chatter,status);
-    return status;
-}
-
-int DAL3IBIS_open_EFFC(char *dol_EFFC, dal_element **ptr_dal_EFFC, int chatter, int status) { // these are identical!!!
+int DAL3IBIS_open_EFFC(char *dol_EFFC, dal_element **ptr_dal_EFFC, int chatter, int status) { 
 
     char keyVal[DAL_MAX_STRING];
  //   int numRow, numCol, numAxes;
@@ -1329,26 +1366,6 @@ int DAL3IBIS_open_EFFC(char *dol_EFFC, dal_element **ptr_dal_EFFC, int chatter, 
                                   dol_EFFC, DS_ISGR_EFFC, keyVal);
       return status=I_ISGR_ERR_BAD_INPUT;
     }
-
-    /*
-    status=DALarrayGetStruct(*ptr_dal_LUT2, &type, &numAxes, dimAxes, status);
-    if (status != ISDC_OK) {
-      RILlogMessage(NULL, Error_2, "Cannot get the 2 sizes of array %13s. Status=%d",
-                                  DS_ISGR_LUT2, status);
-      return status=I_ISGR_ERR_ISGR_RISE_BAD;
-    }
-
-    if (numAxes != ISGRI_DIM_LUT2) {
-      RILlogMessage(NULL, Error_2, "%13s image must be a 2D array.", DS_ISGR_LUT2);
-      return status=I_ISGR_ERR_ISGR_RISE_BAD;
-    }
-
-    if (  (dimAxes[0]!=ISGRI_LUT2_N_RT) || (dimAxes[1]!=ISGRI_LUT2_N_PHA)) {
-      RILlogMessage(NULL, Error_2, "%13s array dimensions must be: %d*%d not %d*%d",
-                                  DS_ISGR_LUT2, ISGRI_LUT2_N_RT, ISGRI_LUT2_N_PHA, dimAxes[0], dimAxes[1]);
-      status=I_ISGR_ERR_ISGR_RISE_BAD;
-      return status;
-    }*/
 
     return status;
 }
@@ -1414,6 +1431,96 @@ int DAL3IBIS_read_EFFC(dal_element **ptr_ptr_dal_EFFC, ISGRI_efficiency_struct *
     
     return status;
 }
+
+
+/// picsit
+//
+//
+
+
+int DAL3IBIS_open_PICsIT_GO(char *dol,
+        dal_element **picsEnerTabPtr,
+        int chatter,
+        int status)
+{
+    char keyVal[DAL_MAX_STRING];
+    long numRow;
+    int numCol;
+
+    TRY_BLOCK_BEGIN
+        TRY( DALobjectOpen(dol, picsEnerTabPtr, status), status, "open %s",dol);
+        TRY( DALelementGetName(*picsEnerTabPtr, keyVal, status), status, "get element name");
+
+        if (strcmp(keyVal, DS_PICS_GO)) {
+            FAIL(I_COMP_SCA_ERR_BAD_INPUT,"File (%s) should be a %13s", dol, DS_PICS_GO);
+        }
+
+        TRY( DALtableGetNumRows(*picsEnerTabPtr, &numRow, status), I_COMP_SCA_ERR_PICS_ENER_BAD, "reading PICsIT GO table");
+        TRY( DALtableGetNumCols(*picsEnerTabPtr, &numCol, status), I_COMP_SCA_ERR_PICS_ENER_BAD, "reading PICsIT GO table");
+
+        if (numRow != PICSIT_N_PIX) {
+            status=I_COMP_SCA_ERR_PICS_ENER_BAD;
+            FAIL(I_COMP_SCA_ERR_PICS_ENER_BAD,"Wrong number of rows (%ld) in %13s.", numRow, DS_PICS_GO);
+        }
+
+        if (numCol != PICSIT_GO_N_COL) {
+            FAIL(I_COMP_SCA_ERR_PICS_ENER_BAD,"Wrong number of columns (%ld) in %13s.", numCol, DS_PICS_GO);
+        }
+
+   TRY_BLOCK_END
+
+   return status;
+}
+
+
+
+int DAL3IBIS_read_PICsIT_GO(dal_element **ptr_picsEnerTabPtr,
+        PICsIT_energy_calibration_struct *ptr_PICsIT_energy_calibration,
+        int chatter,
+        int status)
+{
+    int   j,
+          delta = PICSIT_GO_N_COL-PICSIT_GO_N_DATA;
+    dal_dataType  type;
+
+    TRY_BLOCK_BEGIN
+
+        if (chatter > 3) {
+            RILlogMessage(NULL, Log_0, "PICsIT energy correction LUT reading...");
+            RILlogMessage(NULL, Log_0, "Global gain  : %g keV/channel", PICSIT_GAIN);
+            RILlogMessage(NULL, Log_0, "Global offset: %g keV", PICSIT_OFFSET);
+        }
+        for (j=1; j<=PICSIT_GO_N_DATA; j++) {
+            type=DAL_FLOAT;
+            TRY( DALtableGetCol(*ptr_picsEnerTabPtr, NULL, j+delta, &type, NULL,
+                    (void *)(ptr_PICsIT_energy_calibration->gain_offset[j-1]), status), status, "Cannot read PICsIT LUT columns." );
+        }
+
+    TRY_BLOCK_END
+
+    return status;
+}
+
+
+
+int DAL3IBIS_print_all_events(dal_element *DAL_DS,int status) {
+    TRY_BLOCK_BEGIN
+        long ib_ev[5];
+
+        TRY( DAL3IBISshowAllEvents(DAL_DS,ib_ev,status), status, "show all events");
+
+        RILlogMessage(NULL, Log_0, "ISGRI Events            : %ld\n",ib_ev[ISGRI_EVTS]);
+        RILlogMessage(NULL, Log_0, "PICsIT Single Events    : %ld\n",ib_ev[PICSIT_SGLE]);
+        RILlogMessage(NULL, Log_0, "PICsIT Multiple Events  : %ld\n",ib_ev[PICSIT_MULE]);
+        RILlogMessage(NULL, Log_0, "COMPTON Single Events   : %ld\n",ib_ev[COMPTON_SGLE]);
+        RILlogMessage(NULL, Log_0, "COMPTON Multiple Events : %ld\n",ib_ev[COMPTON_MULE]);
+
+    TRY_BLOCK_END
+
+    return status;
+}
+
+
 
 /*double get_ISGRI_efficiency(double energy,
         double LT_setting,

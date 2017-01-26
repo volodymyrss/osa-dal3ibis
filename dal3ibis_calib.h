@@ -10,11 +10,18 @@
 /*****************************************************************************/
 
 
+#define TRY_BLOCK_BEGIN  do { 
+#define TRY_BLOCK_END } while(0);
+#define TRY(call,fail_status,...) if ( (status=call) != ISDC_OK ) { RILlogMessage(NULL,Error_1,"error in the call: %i, call forwards %i",status,fail_status); print_error(status); print_error(fail_status); RILlogMessage(NULL,Error_1,##__VA_ARGS__); break;}
+#define FAIL(status,...) { print_error(status); RILlogMessage(NULL,Error_1,##__VA_ARGS__); break;}
+
+
 #define DS_ISGR_LUT1      "ISGR-OFFS-MOD"
 #define DS_ISGR_LUT2      "ISGR-RISE-MOD"
 #define DS_ISGR_L2RE      "ISGR-L2RE-MOD"
 #define DS_ISGR_MCEC      "ISGR-MCEC-MOD"
 #define DS_ISGR_EFFC      "ISGR-EFFC-MOD"
+#define DS_PICS_GO   "PICS-ENER-MOD"
 
 
 #define N_MCE 8
@@ -90,8 +97,19 @@ typedef struct ISGRI_energy_calibration_struct {
 
 } ISGRI_energy_calibration_struct;
 
-// structure describing efficiency of ISGRI components
-typedef struct {
+#define PICSIT_N_PIX    4096l
+#define PICSIT_GO_N_COL    4
+#define PICSIT_GO_N_DATA   2 /* only 2 last columns used */
+#define PICSIT_GAIN      7.1
+#define PICSIT_OFFSET  -22.0 /* in keV */
+
+
+
+typedef struct PICsIT_energy_calibration_struct {
+    float *gain_offset[PICSIT_GO_N_DATA];;
+} PICsIT_energy_calibration_struct;
+
+typedef struct ISGRI_efficiency_struct {
 
     double MCE_efficiency[N_MCE][N_E_BAND]; // energy-dependent
     double LT_efficiency[N_LT][N_E_BAND]; // energy-dependent, per LT class
@@ -109,7 +127,7 @@ typedef struct infoEvt_struct {
     long negative_energy;
 } infoEvt_struct;
 
-typedef struct ISGRI_events_struct {
+typedef struct IBIS_events_struct {
     long       numEvents;
 
     OBTime     obtStart;
@@ -122,42 +140,21 @@ typedef struct ISGRI_events_struct {
     DAL3_Byte *riseTime;
     DAL3_Byte *isgriY;
     DAL3_Byte *isgriZ;
+    
+    DAL3_Byte *picsitPha;
+    DAL3_Byte *picsitY;
+    DAL3_Byte *picsitZ;
 
     float *isgri_energy;
     DAL3_Byte  *isgri_pi;
+    
+    float *picsit_energy;
 
     infoEvt_struct infoEvt;
-} ISGRI_events_struct;
 
-int DAL3IBISreadMCEcorrection( dal_element *MCECorrectionStructure, 
-				ISGRI_energy_calibration_struct *ISGRI_energy_calibration, 
-				int          status );
+    IBIS_type event_kind;
+} IBIS_events_struct;
 
-int DAL3IBISreadLUT1( dal_element *LUT1Structure, 
-				ISGRI_energy_calibration_struct *ISGRI_energy_calibration, 
-				int          status );
-
-int DAL3IBISreadLUT2( dal_element *LUT2Structure, 
-				ISGRI_energy_calibration_struct *ISGRI_energy_calibration, 
-				int          status );
-
-
-int DAL3IBISreadMCEEfficiency( dal_element *MCEEfficiencyStructure, 
-				ISGRI_efficiency_struct *ISGRI_efficiency, 
-				int          status );
-
-int DAL3IBISreadLTEfficiency( dal_element *LTEfficiencyStructure, 
-				ISGRI_efficiency_struct *ISGRI_efficiency, 
-				int          status );
-
-int DAL3IBISreadPixelEfficiency( dal_element *PixelEfficiencyStructure, 
-				ISGRI_efficiency_struct *ISGRI_efficiency, 
-				int          status );
-
-// compute
-int DAL3IBISGetISGRIEfficiency(
-                ISGRI_efficiency_struct *ISGRI_efficiency,
-				int          status);
 
 // auxiliary calls to read HK
 
@@ -188,9 +185,17 @@ int DAL3IBIS_read_L2RE(dal_element **ptr_ptr_dal_L2RE, ISGRI_energy_calibration_
 int DAL3IBIS_read_MCEC(dal_element **ptr_ptr_dal_MCEC, ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration, int chatter, int status);
 int DAL3IBIS_read_EFFC(dal_element **ptr_ptr_dal_EFFC, ISGRI_efficiency_struct *ptr_ISGRI_efficiency, int chatter, int status);
 
-#define TRY_BLOCK_BEGIN  do { 
-#define TRY_BLOCK_END } while(0);
-#define TRY(call,fail_status,...) if ( (status=call) != ISDC_OK ) { RILlogMessage(NULL,Error_1,"error in the call: %i, call forwards %i",status,fail_status); print_error(status); print_error(fail_status); RILlogMessage(NULL,Error_1,##__VA_ARGS__); break;}
+int DAL3IBIS_open_PICsIT_GO(char *dol, dal_element **picsEnerTabPtr, int chatter, int status);
+int DAL3IBIS_read_PICsIT_GO(dal_element **ptr_picsEnerTabPtr, PICsIT_energy_calibration_struct *ptr_PICsIT_energy_calibration, int chatter, int status);
+
+
+int DAL3IBIS_read_IBIS_events(dal_element *workGRP,
+        IBIS_type event_kind,
+        IBIS_events_struct *ptr_IBIS_events,
+        int gti,
+        int chatter,
+        int status
+        );
 
 
 
