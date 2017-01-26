@@ -59,9 +59,6 @@
     return status;
 }*/
 
-#define TRY_BLOCK_BEGIN  do { 
-#define TRY_BLOCK_END } while(0);
-#define TRY(call,fail_status,...) if ( status=call != ISDC_OK ) { RILlogMessage(NULL,Error_1,"error in the call: %i",status); status=fail_status; RILlogMessage(NULL,Error_1,##__VA_ARGS__); break;}
 
 int main(int arg, char *argv[]) {
 
@@ -81,6 +78,18 @@ int main(int arg, char *argv[]) {
   status=ISDC_OK;
 
   TRY_BLOCK_BEGIN
+      setup_E_bands();
+
+      double x;
+
+      for (x=0;x<3;x+=0.1) {
+        double en=pow(10,x);
+        int ch=get_channel(en);
+        double en1=E_band_min[ch];
+        double en2=E_band_max[ch];
+        printf("en:%.5lg ch:%i er: %g - %g\n",en,ch,get_E_min(ch),get_E_max(ch));
+      }
+
       TRY(RILinit(&fileRef, "", OUT_ALL, "Default"),status,"RILinit");
 
       printf("OBJECT            : %s\n",argv[1]);
@@ -94,7 +103,7 @@ int main(int arg, char *argv[]) {
       ISGRI_events_struct ISGRI_events;
       ISGRI_energy_calibration_struct ISGRI_energy_calibration;
 
-      TRY( DAL3IBIS_read_ISGRI_events(DAL_DS,&ISGRI_events,1,chatter,status), status, "reading ISGRI events"); 
+      TRY( DAL3IBIS_read_ISGRI_events(DAL_DS,&ISGRI_events,1,chatter,status), 0, "reading ISGRI events"); 
       TRY( DAL3IBIS_init_ISGRI_energy_calibration(&ISGRI_energy_calibration,status), status, "initializing ISGRI energy calibration");
 
       TRY( DAL3IBIS_populate_newest_LUT1(&ISGRI_events,&ISGRI_energy_calibration,chatter,status), status, "loading LUT1" );
@@ -103,7 +112,7 @@ int main(int arg, char *argv[]) {
       TRY( DAL3IBIS_populate_newest_MCEC(&ISGRI_events,&ISGRI_energy_calibration,chatter,status), status, "loading MCE evolution correction");
       TRY( DAL3IBIS_populate_newest_LUT2(&ISGRI_events,&ISGRI_energy_calibration,chatter,status), status, "loading LUT2" );
       TRY( DAL3IBIS_populate_newest_LUT2_rapid_evolution(&ISGRI_events,&ISGRI_energy_calibration,chatter,status), status, "loading LUT2 rapid evolution" );
-
+      
       TRY( DAL3IBIS_reconstruct_ISGRI_energies(&ISGRI_energy_calibration,&ISGRI_events,chatter,status), status, "reconstructing energies");
 
       printf("DAL3IBISshowAllEvents\n");
@@ -114,6 +123,9 @@ int main(int arg, char *argv[]) {
       printf("COMPTON Single Events   : %ld\n",ib_ev[COMPTON_SGLE]);
       printf("COMPTON Multiple Events : %ld\n",ib_ev[COMPTON_MULE]);
       printf("Status: %d\n\n",status);
+      
+      ISGRI_efficiency_struct ISGRI_efficiency;
+      TRY( DAL3IBIS_populate_newest_EFFC(&ISGRI_events,&ISGRI_efficiency,chatter,status), status, "efficiency" );
 
   TRY_BLOCK_END
   

@@ -27,19 +27,20 @@
                                                                           
 ***************************************************************************/
 
-#define DS_ISGR_HK   "IBIS-DPE.-CNV"
 #define KEY_DEF_BIAS      -120.0 
 #define KEY_DEF_TEMP        -8.0    /* default when HK1 missing */
-#define DS_ISGR_RAW       "ISGR-EVTS-ALL"
-#define DS_ISGR_LUT1      "ISGR-OFFS-MOD"
-#define DS_ISGR_LUT2      "ISGR-LUT2-MOD"
-#define DS_ISGR_L2RE      "ISGR-L2RE-MOD"
-#define DS_ISGR_MCEC      "ISGR-MCEC-MOD"
-#define DS_PHG2           "ISGR-GAIN-MOD"
-#define DS_PHO2           "ISGR-OFF2-MOD"
-#define KEY_COL_OUT  "ISGRI_PI"
 
 #define DS_ISGR_HK   "IBIS-DPE.-CNV"
+#define DS_ISGR_RAW       "ISGR-EVTS-ALL"
+#define DS_ISGR_LUT1      "ISGR-OFFS-MOD"
+#define DS_ISGR_LUT2      "ISGR-RISE-MOD"
+#define DS_ISGR_L2RE      "ISGR-L2RE-MOD"
+#define DS_ISGR_MCEC      "ISGR-MCEC-MOD"
+#define DS_ISGR_EFFC      "ISGR-EFFC-MOD"
+#define DS_PHG2           "ISGR-GAIN-MOD"
+#define DS_PHO2           "ISGR-OFF2-MOD"
+
+//#define KEY_COL_OUT  "ISGRI_PI"
 #define KEY_MCE_BIAS "I0E_MCDTE_MBIAS"
 #define KEY_DEF_BIAS      -120.0    /* default when HK1 missing */
 #define KEY_MAX_BIAS       -60.0    /*  155 to disregard RAW 0  */
@@ -48,7 +49,6 @@
 #define KEY_RMS_TEMP         1.2    /* disregard MCE Temp */
 #define KEY_MIN_TEMP       -50.5    /* to disregard RAW 0 */
 
-
 #define I_ISGR_ERR_MEMORY         -122050
 #define I_ISGR_ERR_BAD_INPUT      -122051
 #define I_ISGR_ERR_ISGR_OFFS_BAD  -122052
@@ -56,102 +56,6 @@
 #define I_ISGR_ERR_ISGR_OUT_COR   -122054
 #define I_ISGR_ERR_IBIS_IREM_BAD  -122055
 #define I_ISGR_ERR_ISGR_PHGO2_BAD -122056
-
-
-// to memtools
-//
-
-
-
-typedef struct DAL_GC_allocation_struct {
-    char comment[DAL_MAX_STRING];
-    void *ptr;
-    DAL_GC_RESOURCE_KIND resource_kind;
-} DAL_GC_allocation_struct;
-
-
-static struct DAL_GC_struct {
-    int n_entries;
-    DAL_GC_allocation_struct allocations[DAL_GC_MAX_ALLOCATIONS];
-} DAL_GC;
-
-void DAL_GC_register_allocation(void *ptr, DAL_GC_RESOURCE_KIND resource_kind, char *comment) {
-    DAL_GC.allocations[DAL_GC.n_entries].ptr=ptr;
-    DAL_GC.allocations[DAL_GC.n_entries].resource_kind=resource_kind;
-    strncpy(DAL_GC.allocations[DAL_GC.n_entries].comment,comment,DAL_MAX_STRING);
-    DAL_GC.n_entries++;
-}
-
-void DAL_GC_print() {
-    int i;
-
-    for (i=0;i<DAL_GC.n_entries;i++) {
-        if (DAL_GC.allocations[i].resource_kind == DAL_GC_MEMORY_RESOURCE) {
-            RILlogMessage(NULL,Log_0,"GC resource memory: %s",DAL_GC.allocations[i].comment);
-        } else if (DAL_GC.allocations[i].resource_kind == DAL_GC_MEMORY_RESOURCE) {
-            RILlogMessage(NULL,Log_0,"GC resource DAL object: %s",DAL_GC.allocations[i].comment);
-        }
-    }
-}
-
-void DAL_GC_free_all() {
-    int i,status;
-
-    for (i=DAL_GC.n_entries-1;i>=0;i--) {
-        if (DAL_GC.allocations[i].resource_kind == DAL_GC_MEMORY_RESOURCE) {
-            RILlogMessage(NULL,Log_0,"GC to free resource memory: %s",DAL_GC.allocations[i].comment);
-            free(DAL_GC.allocations[i].ptr);
-        } else if (DAL_GC.allocations[i].resource_kind == DAL_GC_DAL_OBJECT_RESOURCE) {
-            RILlogMessage(NULL,Log_0,"GC to free resource DAL object: %s",DAL_GC.allocations[i].comment);
-            status=DALobjectClose((dal_object)(DAL_GC.allocations[i].ptr), DAL_SAVE, ISDC_OK);
-        } else {
-        };
-    }
-    
-}
-
-int DAL_GC_allocateDataBuffer(void **buffer, 
-                              long buffSize, 
-                              int status,
-                              char *comment)
-{
-    *buffer=NULL;
-    status=DALallocateDataBuffer(buffer, 
-                                 buffSize, 
-                                 status);
-    DAL_GC_register_allocation(*buffer, DAL_GC_MEMORY_RESOURCE, comment);
-    return status;
-}
-
-int DAL_GC_freeDataBuffer(void *buffer,
-                      int   status)
-{
-    int i;
-    int found=0;
-
-    status=DALfreeDataBuffer(buffer,status);
-
-    for (i=0;i<DAL_GC.n_entries;i++) {
-        if (DAL_GC.allocations[i].ptr == buffer) found=1;
-        if ( (found==1) && (i<DAL_GC.n_entries-1) )
-            DAL_GC.allocations[i]=DAL_GC.allocations[i+1];
-    }
-    if ( found==1 ) 
-        DAL_GC.n_entries--;
-
-    return status;
-}
-
-
-int DAL_GC_objectOpen(const char   *DOL,    /* I DOL of object to open          */
-        dal_object   *object, /* O DAL element pointer            */
-        int           status) {
-    status=DALobjectOpen(DOL,object,status);
-    DAL_GC_register_allocation((void*)object, DAL_GC_DAL_OBJECT_RESOURCE,(char *)DOL);
-
-    return status;
-}
-
 
 
 /// this is not right!
@@ -164,7 +68,6 @@ int doICgetNewestDOL(char * category,char * filter, double valid_time, char * DO
     return status;
 }
 
-// dealocate and close
 
 static const double DtempH1[8] = {0.43, -0.39, -0.77, 0.84, -0.78, 1.09, -0.08, -0.31};
 double slopeMCE[8]={-1.8,-2.0,-2.3,-2.7,-0.5,-2.4,-0.8,-0.5} ;
@@ -569,7 +472,7 @@ inline int DAL3IBIS_reconstruct_ISGRI_energy(
          ptr_infoEvt->bad_pixel_yz++;
          *ptr_isgri_energy=0;
          *ptr_isgri_pi=irt;
-         return;
+         return -1;
     };
 
     rt = rt * ptr_ISGRI_energy_calibration->LUT1.rt_gain[isgriY][isgriZ] + ptr_ISGRI_energy_calibration->LUT1.rt_offset[isgriY][isgriZ];
@@ -593,7 +496,7 @@ inline int DAL3IBIS_reconstruct_ISGRI_energy(
             +(ptr_ISGRI_energy_calibration->LUT2[irt+ipha*ISGRI_LUT2_N_RT+1]-ptr_ISGRI_energy_calibration->LUT2[irt+ipha*ISGRI_LUT2_N_RT])*(pha/2.-(double)ipha);
 
     // invalid LUT2 values
-    if (ptr_isgri_energy <= 0) {
+    if (*ptr_isgri_energy <= 0) {
         ptr_infoEvt->negative_energy++;
         *ptr_isgri_energy=0;
     };
@@ -741,7 +644,7 @@ int DAL3IBIS_read_ISGRI_events(dal_element *workGRP,
       return status;
     }
       
-    RILlogMessage(NULL, Log_1, "IJD: %.5lg - %.5lg", ijds[0], ijds[1], status);
+    RILlogMessage(NULL, Log_1, "IJD: %.5lg - %.5lg", ijds[0], ijds[1]);
 
     ptr_ISGRI_events->ijdStart=ijds[0];
     ptr_ISGRI_events->ijdEnd=ijds[1];
@@ -964,8 +867,8 @@ int DAL3IBIS_read_LUT1(dal_element **ptr_dal_LUT1, ISGRI_energy_calibration_stru
 int DAL3IBIS_populate_newest_LUT2(ISGRI_events_struct *ptr_ISGRI_events, ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration, int chatter, int status) {
     char dol_LUT2[DAL_MAX_STRING];
 
-    status=doICgetNewestDOL("ISGR-LUT2-MOD","",ptr_ISGRI_events->ijdStart,dol_LUT2,status);
-    RILlogMessage(NULL,Log_0,"Found ISGR-LUT2-MOD as %s",dol_LUT2);
+    status=doICgetNewestDOL(DS_ISGR_LUT2,"",ptr_ISGRI_events->ijdStart,dol_LUT2,status);
+    RILlogMessage(NULL,Log_0,"Found %s as %s",DS_ISGR_LUT2,dol_LUT2);
 
     status=DAL3IBIS_populate_LUT2(dol_LUT2, ptr_ISGRI_energy_calibration, chatter, status);
     return status;
@@ -979,6 +882,29 @@ int DAL3IBIS_populate_LUT2(char *dol_LUT2, ISGRI_energy_calibration_struct *ptr_
 }
 
 int DAL3IBIS_open_LUT2(char *dol_LUT2, dal_element **ptr_dal_LUT2, int chatter, int status) {
+    char keyVal[DAL_MAX_STRING];
+    int numRow, numCol, numAxes;
+    long int dimAxes[2];  
+    dal_dataType type;
+
+    status=DAL_GC_objectOpen(dol_LUT2, ptr_dal_LUT2, status);
+    status=DALelementGetName(*ptr_dal_LUT2, keyVal, status);
+
+    if (status != ISDC_OK) {
+      RILlogMessage(NULL, Error_2, "%13s image cannot be opened. Status=%d",
+                                  DS_ISGR_LUT2, status);
+      return status=I_ISGR_ERR_BAD_INPUT; // file not found!
+    }
+    if (strcmp(keyVal, DS_ISGR_LUT2)) {
+      RILlogMessage(NULL, Error_2, "File (%s) should be a %13s not %s",
+                                  dol_LUT2, DS_ISGR_LUT2, keyVal);
+      return status=I_ISGR_ERR_BAD_INPUT;
+    }
+
+    return status;
+}
+
+int DAL3IBIS_open_LUT2_image(char *dol_LUT2, dal_element **ptr_dal_LUT2, int chatter, int status) {
     char keyVal[DAL_MAX_STRING];
     int numRow, numCol, numAxes;
     long int dimAxes[2];  
@@ -1020,7 +946,7 @@ int DAL3IBIS_open_LUT2(char *dol_LUT2, dal_element **ptr_dal_LUT2, int chatter, 
     return status;
 }
 
-int DAL3IBIS_read_LUT2(dal_element **ptr_ptr_dal_LUT2, ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration, int chatter, int status) {
+int DAL3IBIS_read_LUT2_image(dal_element **ptr_ptr_dal_LUT2, ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration, int chatter, int status) {
     dal_dataType type;
     long int my_numValues;
     long int my_startValues[2]={1,1},
@@ -1037,6 +963,48 @@ int DAL3IBIS_read_LUT2(dal_element **ptr_ptr_dal_LUT2, ISGRI_energy_calibration_
                               my_endValues, &type, &my_numValues,
                               (void *)ptr_ISGRI_energy_calibration->LUT2, status);
 
+    if (status != ISDC_OK) {
+      RILlogMessage(NULL, Error_2, "Cannot read LUT2 array. Status=%d", status);
+      return status;
+    }
+
+    return status;
+}
+
+int DAL3IBIS_read_LUT2(dal_element **ptr_ptr_dal_LUT2, ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration, int chatter, int status) {
+    dal_dataType type;
+    long int numRows;
+    double energy[N_E_BAND];
+    int channel[N_E_BAND];
+    double corr[N_E_BAND][N_E_BAND];
+
+    if (chatter > 3) RILlogMessage(NULL, Log_0, "ISGRI rise-time LUT2 reading...");
+
+    TRY_BLOCK_BEGIN
+
+        TRY( DAL_GC_allocateDataBuffer((void **)&ptr_ISGRI_energy_calibration->LUT2, ISGRI_LUT2_N_RT*ISGRI_LUT2_N_PHA*sizeof(double), status, "LUT2"), 0, "allocating LUT2");
+    
+        TRY( DALtableGetNumRows(*ptr_ptr_dal_LUT2,&numRows,status) , -1, "getting Num Rows for %s",DS_ISGR_LUT2);
+        if (chatter > 3) RILlogMessage(NULL, Log_0, "%s rows %li...",DS_ISGR_LUT2,numRows);
+
+        if (numRows!=N_E_BAND) {
+            RILlogMessage(NULL, Error_1, "LUT2 must be %i x %i",numRows);
+            return -1;
+        }
+
+
+        type=DAL_DOUBLE;
+        TRY( DALtableGetCol(*ptr_ptr_dal_LUT2, NULL, 1, &type, NULL, (void *)(energy), status), -1, "reading LUT2 energy" );
+        
+        type=DAL_INT;
+        TRY( DALtableGetCol(*ptr_ptr_dal_LUT2, NULL, 2, &type, NULL, (void *)(channel), status), -1, "reading LUT2 channe");
+        
+        type=DAL_DOUBLE;
+        TRY( DALtableGetCol(*ptr_ptr_dal_LUT2, NULL, 3, &type, NULL, (void **)(corr), status), -1, "reading efficiency");
+
+
+    TRY_BLOCK_END
+    
     if (status != ISDC_OK) {
       RILlogMessage(NULL, Error_2, "Cannot read LUT2 array. Status=%d", status);
       return status;
@@ -1124,7 +1092,7 @@ int DAL3IBIS_read_L2RE(dal_element **ptr_ptr_dal_L2RE, ISGRI_energy_calibration_
     DALtableGetNumRows(*ptr_ptr_dal_L2RE,&ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.n_entries,status);
     // check if too much
     
-    if (chatter > 3) RILlogMessage(NULL, Log_0, "ISGRI L2RE rows: %i",ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.n_entries);
+    if (chatter > 3) RILlogMessage(NULL, Log_0, "ISGRI L2RE rows: %li",ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.n_entries);
     
     type=DAL_DOUBLE;
     status=DALtableGetCol(*ptr_ptr_dal_L2RE, NULL, 1, &type, NULL,
@@ -1187,7 +1155,7 @@ int DAL3IBIS_open_MCEC(char *dol_MCEC, dal_element **ptr_dal_MCEC, int chatter, 
     char keyVal[DAL_MAX_STRING];
     int numRow, numCol, numAxes;
     long int dimAxes[2];  
-    dal_dataType type;
+ //   dal_dataType type;
 
     status=DAL_GC_objectOpen(dol_MCEC, ptr_dal_MCEC, status);
     status=DALelementGetName(*ptr_dal_MCEC, keyVal, status);
@@ -1254,3 +1222,142 @@ int DAL3IBIS_read_MCEC(dal_element **ptr_ptr_dal_MCEC, ISGRI_energy_calibration_
     return status;
 }
     
+////////////////////////
+
+int DAL3IBIS_populate_newest_EFFC(ISGRI_events_struct *ptr_ISGRI_events, ISGRI_efficiency_struct *ptr_ISGRI_efficiency, int chatter, int status) {
+    char dol_EFFC[DAL_MAX_STRING];
+    
+    if (chatter > 3) RILlogMessage(NULL, Log_0, "ISGRI efficiency correction reading...");
+
+    status=doICgetNewestDOL("ISGR-EFFC-MOD","",ptr_ISGRI_events->ijdStart,dol_EFFC,status);
+    
+    if (status != ISDC_OK) {
+        RILlogMessage(NULL,Error_1,"did not find ISGR-EFFC-MOD");
+        return status;
+    }
+    RILlogMessage(NULL,Log_0,"Found ISGR-EFFC-MOD as %s",dol_EFFC);
+
+    status=DAL3IBIS_populate_EFFC(dol_EFFC, ptr_ISGRI_efficiency, chatter, status);
+
+    return status;
+}
+
+int DAL3IBIS_populate_EFFC(char *dol_EFFC, ISGRI_efficiency_struct *ptr_ISGRI_efficiency, int chatter, int status) {
+    dal_element *ptr_dal_EFFC;
+    status=DAL3IBIS_open_EFFC(dol_EFFC,&ptr_dal_EFFC,chatter,status);
+    status=DAL3IBIS_read_EFFC(&ptr_dal_EFFC,ptr_ISGRI_efficiency,chatter,status);
+    return status;
+}
+
+int DAL3IBIS_open_EFFC(char *dol_EFFC, dal_element **ptr_dal_EFFC, int chatter, int status) { // these are identical!!!
+
+    char keyVal[DAL_MAX_STRING];
+ //   int numRow, numCol, numAxes;
+ //   long int dimAxes[2];  
+ //   dal_dataType type;
+
+    status=DAL_GC_objectOpen(dol_EFFC, ptr_dal_EFFC, status);
+    status=DALelementGetName(*ptr_dal_EFFC, keyVal, status);
+
+    if (status != ISDC_OK) {
+      RILlogMessage(NULL, Error_2, "%13s ISGRI efficiency cannot be opened. Status=%d",
+                                  DS_ISGR_EFFC, status);
+      return status=I_ISGR_ERR_BAD_INPUT; // file not found!
+    }
+    if (strcmp(keyVal, DS_ISGR_EFFC)) {
+      RILlogMessage(NULL, Error_2, "File (%s) should be a %13s not %s",
+                                  dol_EFFC, DS_ISGR_EFFC, keyVal);
+      return status=I_ISGR_ERR_BAD_INPUT;
+    }
+
+    /*
+    status=DALarrayGetStruct(*ptr_dal_LUT2, &type, &numAxes, dimAxes, status);
+    if (status != ISDC_OK) {
+      RILlogMessage(NULL, Error_2, "Cannot get the 2 sizes of array %13s. Status=%d",
+                                  DS_ISGR_LUT2, status);
+      return status=I_ISGR_ERR_ISGR_RISE_BAD;
+    }
+
+    if (numAxes != ISGRI_DIM_LUT2) {
+      RILlogMessage(NULL, Error_2, "%13s image must be a 2D array.", DS_ISGR_LUT2);
+      return status=I_ISGR_ERR_ISGR_RISE_BAD;
+    }
+
+    if (  (dimAxes[0]!=ISGRI_LUT2_N_RT) || (dimAxes[1]!=ISGRI_LUT2_N_PHA)) {
+      RILlogMessage(NULL, Error_2, "%13s array dimensions must be: %d*%d not %d*%d",
+                                  DS_ISGR_LUT2, ISGRI_LUT2_N_RT, ISGRI_LUT2_N_PHA, dimAxes[0], dimAxes[1]);
+      status=I_ISGR_ERR_ISGR_RISE_BAD;
+      return status;
+    }*/
+
+    return status;
+}
+
+
+int DAL3IBIS_read_EFFC(dal_element **ptr_ptr_dal_EFFC, ISGRI_efficiency_struct *ptr_ISGRI_efficiency, int chatter, int status) {
+    dal_dataType type;
+    long int numRows;
+    
+
+    int pixel_grouping[MAX_PIXEL_GROUPS];
+    int pixel_group[MAX_PIXEL_GROUPS];
+    double efficiency[MAX_PIXEL_GROUPS][N_E_BAND];
+    int i,j;
+
+    TRY_BLOCK_BEGIN
+
+        if (chatter > 3) RILlogMessage(NULL, Log_0, "ISGRI EFFC reading...");
+
+        TRY( DALtableGetNumRows(*ptr_ptr_dal_EFFC,&numRows,status) , -1, "getting Num Rows for EFFC");
+        if (chatter > 3) RILlogMessage(NULL, Log_0, "ISGRI EFFC rows %li...",numRows);
+
+        if (numRows>MAX_PIXEL_GROUPS) {
+            RILlogMessage(NULL, Error_1, "too many pixel groups %li",numRows);
+            return -1;
+        }
+
+        
+        type=DAL_INT;
+        TRY( DALtableGetCol(*ptr_ptr_dal_EFFC, NULL, 1, &type, NULL, (void *)(pixel_grouping), status), -1, "reading pixel grouping" );
+        
+        type=DAL_INT;
+        TRY( DALtableGetCol(*ptr_ptr_dal_EFFC, NULL, 2, &type, NULL, (void *)(pixel_group), status), -1, "reading pixel groups");
+        
+        type=DAL_DOUBLE;
+        TRY( DALtableGetCol(*ptr_ptr_dal_EFFC, NULL, 3, &type, NULL, (void **)(efficiency), status), -1, "reading efficiency");
+
+        for (i=0;i<numRows;i++) {
+            double ***eff;
+            int maxgroup=0;
+            if ( pixel_grouping[i] == PIXEL_GROUPING_MCE ) {
+                eff=(double ***)&(ptr_ISGRI_efficiency->MCE_efficiency);
+                maxgroup=N_MCE;
+            } else if ( pixel_grouping[i] == PIXEL_GROUPING_LT ) {
+                eff=(double ***)&(ptr_ISGRI_efficiency->LT_efficiency);
+                maxgroup=N_LT;
+            } else {
+                RILlogMessage(NULL, Error_1, "invalid grouping %i",pixel_grouping[i]);
+                continue;
+            }
+
+            if ((pixel_group[i]<0) || (pixel_group[i]>=maxgroup)) {
+                RILlogMessage(NULL, Error_1, "invalid group %i for grouping %i max %i",pixel_group[i],pixel_grouping[i],maxgroup);
+                continue;
+            }
+               
+            for (j=0;j<N_E_BAND;j++)
+                (*((double (*)[maxgroup][N_E_BAND])eff))[pixel_group[i]][j]=efficiency[i][j];
+        }
+
+    TRY_BLOCK_END
+
+    
+    return status;
+}
+
+/*double get_ISGRI_efficiency(double energy,
+        double LT_setting,
+        int MCE) {
+    
+}*/
+

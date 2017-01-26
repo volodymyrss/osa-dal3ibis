@@ -24,6 +24,27 @@
 
 #define ISGRI_LUT1_N_COL 5
 
+#define MAX_PIXEL_GROUPS 32
+#define PIXEL_GROUPING_MCE 0
+#define PIXEL_GROUPING_LT 1
+
+// keep band treatement separate
+#define N_E_BAND 256 
+
+double E_band_min[N_E_BAND];
+double E_band_max[N_E_BAND];
+
+#define E_BAND_N_REVERSE 2048
+#define E_BAND_REVERSE_STEP 0.5
+
+int E_band_reverse[E_BAND_N_REVERSE];
+
+inline double get_E_min(int ch);
+inline double get_E_max(int ch);
+inline int get_channel(double energy);
+
+
+
 // ISGRI detector energy transformation structure
 typedef struct ISGRI_energy_calibration_struct {
 
@@ -65,8 +86,8 @@ typedef struct ISGRI_energy_calibration_struct {
 // structure describing efficiency of ISGRI components
 typedef struct {
 
-    double * MCE_efficiency[N_MCE]; // energy-dependent
-    double * LT_efficiency[N_LT]; // energy-dependent, per LT class
+    double MCE_efficiency[N_MCE][N_E_BAND]; // energy-dependent
+    double LT_efficiency[N_LT][N_E_BAND]; // energy-dependent, per LT class
     //double pixel_efficiency[ISGRI_N_PIXEL_Y][ISGRI_N_PIXEL_Z]; // grey, also used to kill pixels
 
 } ISGRI_efficiency_struct;
@@ -141,9 +162,12 @@ int DAL3IBIS_MceIsgriHkCal(dal_element *workGRP,
         int          chatter,
         int          status);
 
+int print_error(int status);
+
 #define TRY_BLOCK_BEGIN  do { 
 #define TRY_BLOCK_END } while(0);
-#define TRY(call,fail_status,...) if ( status=call != ISDC_OK ) { status=fail_status; RILlogMessage(NULL,Error_1,##__VA_ARGS__); break;}
+#define TRY(call,fail_status,...) if ( (status=call) != ISDC_OK ) { RILlogMessage(NULL,Error_1,"error in the call: %i, call forwards %i",status,fail_status); print_error(status); print_error(fail_status); RILlogMessage(NULL,Error_1,##__VA_ARGS__); break;}
+
 
 
 #ifndef __CINT__

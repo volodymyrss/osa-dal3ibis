@@ -16,7 +16,7 @@ dc.run()
 f=pyfits.open("test_ic/isgri_effc_mod.fits")
 f[1].data=zeros(16+8,dtype=f[1].data.dtype)
 f[1].data['PIXEL_GROUPING'][:8]=0
-f[1].data['PIXEL_GROUPING'][8:]=16
+f[1].data['PIXEL_GROUPING'][8:]=1
 f[1].data['PIXEL_GROUP'][:8]=arange(8)
 f[1].data['PIXEL_GROUP'][8:]=arange(16)
 f[1].data['EFFICIENCY']=1
