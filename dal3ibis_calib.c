@@ -928,11 +928,21 @@ int DAL3IBIS_populate_newest_DS(IBIS_events_struct *ptr_IBIS_events, void * cali
 }
 
 int DAL3IBIS_populate_DS(char *dol,  void * calibration_struct, char *DS, functype_open_DS func_open_DS, functype_read_DS func_read_DS, int chatter, int status) {
+    RILlogMessage(NULL, Log_0, "will load %s calibration from %s",DS,dol);
     dal_element *ptr_dal;
     status=(*func_open_DS)(dol,&ptr_dal,chatter,status);
     status=(*func_read_DS)(&ptr_dal,calibration_struct,chatter,status);
     return status;
 }
+    
+int DAL3IBIS_populate_DS_flexible(char *dol, IBIS_events_struct *ptr_IBIS_events,  void * calibration_struct, char *DS, functype_open_DS func_open_DS, functype_read_DS func_read_DS, int chatter, int status) {
+    if (strcmp(dol,"auto")==0) {
+        RILlogMessage(NULL, Log_0, "will search for bintable %s in IC tree",DS);
+        return DAL3IBIS_populate_newest_DS(ptr_IBIS_events, calibration_struct, DS, func_open_DS, func_read_DS, chatter, status);
+    }       
+    return DAL3IBIS_populate_DS(dol,  calibration_struct, DS, func_open_DS, func_read_DS, chatter, status);
+}
+
     
 
 int DAL3IBIS_open_LUT1(char *dol_LUT1, dal_element **ptr_ptr_dal_LUT1, int chatter,int status) {
@@ -1036,6 +1046,8 @@ int DAL3IBIS_open_LUT2(char *dol_LUT2, dal_element **ptr_dal_LUT2, int chatter, 
     int numRow, numCol, numAxes;
     long int dimAxes[2];  
     dal_dataType type;
+      
+    RILlogMessage(NULL, Log_0, "opening %s",dol_LUT2);
 
     status=DAL_GC_objectOpen(dol_LUT2, ptr_dal_LUT2, status);
     status=DALelementGetName(*ptr_dal_LUT2, keyVal, status);
@@ -1152,7 +1164,7 @@ int DAL3IBIS_read_LUT2(dal_element **ptr_ptr_dal_LUT2, ISGRI_energy_calibration_
         TRY( DALtableGetCol(*ptr_ptr_dal_LUT2, NULL, 2, &type, NULL, (void *)(channel), status), -1, "reading LUT2 channel");
         
         type=DAL_DOUBLE;
-        TRY( DALtableGetCol(*ptr_ptr_dal_LUT2, NULL, 3, &type, NULL, (void **)(corr), status), -1, "reading efficiency");
+        TRY( DALtableGetCol(*ptr_ptr_dal_LUT2, NULL, 3, &type, NULL, (void **)(corr), status), -1, "reading correction");
 
 
         for (pha=0;pha<ISGRI_LUT2_N_PHA;pha++) {
@@ -1272,8 +1284,8 @@ int DAL3IBIS_open_MCEC(char *dol_MCEC, dal_element **ptr_dal_MCEC, int chatter, 
     status=DALelementGetName(*ptr_dal_MCEC, keyVal, status);
 
     if (status != ISDC_OK) {
-      RILlogMessage(NULL, Error_2, "%13s LUT2 rapid evolution cannot be opened. Status=%d",
-                                  DS_ISGR_MCEC, status);
+      RILlogMessage(NULL, Error_2, "%13s could not be opened as %s. Status=%d",
+                                  DS_ISGR_MCEC, dol_MCEC, status);
       return status=I_ISGR_ERR_BAD_INPUT; // file not found!
     }
     if (strcmp(keyVal, DS_ISGR_MCEC)) {
@@ -1288,7 +1300,7 @@ int DAL3IBIS_open_MCEC(char *dol_MCEC, dal_element **ptr_dal_MCEC, int chatter, 
 int DAL3IBIS_read_MCEC(dal_element **ptr_ptr_dal_MCEC, ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration, int chatter, int status) {
     dal_dataType type;
 
-    if (chatter > 3) RILlogMessage(NULL, Log_0, "ISGRI MCEC reading...");
+    if (chatter > 3) RILlogMessage(NULL, Log_0, "reading ISGRI MCEC");
 
     long int numRows;
     DALtableGetNumRows(*ptr_ptr_dal_MCEC,&numRows,status);
