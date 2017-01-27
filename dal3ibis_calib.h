@@ -12,8 +12,9 @@
 
 #define TRY_BLOCK_BEGIN  do { 
 #define TRY_BLOCK_END } while(0);
-#define TRY(call,fail_status,...) if ( (status=call) != ISDC_OK ) { RILlogMessage(NULL,Error_1,"error in the call: %i, call forwards %i",status,fail_status); print_error(status); print_error(fail_status); RILlogMessage(NULL,Error_1,##__VA_ARGS__); break;}
-#define FAIL(status,...) { print_error(status); RILlogMessage(NULL,Error_1,##__VA_ARGS__); break;}
+#define TRY(call,fail_status,...) if ( (status=call) != ISDC_OK ) { char message[DAL_MAX_STRING]; sprintf(message,##__VA_ARGS__); report_try_error(status,fail_status,message,__FILE__,__LINE__); break;}
+#define FAIL(status,...) { char message[DAL_MAX_STRING]; sprintf(message,##__VA_ARGS__); report_try_error(status,status,message,__FILE__,__LINE__); break;}
+
 
 
 #define DS_ISGR_LUT1      "ISGR-OFFS-MOD"
@@ -167,6 +168,7 @@ int DAL3IBIS_MceIsgriHkCal(dal_element *workGRP,
         int          status);
 
 int print_error(int status);
+int explain_error(int status,  char *error);
 
 typedef int (*functype_open_DS)(char *, dal_element **, int , int);
 typedef int (*functype_read_DS)(dal_element **, void *, int , int);

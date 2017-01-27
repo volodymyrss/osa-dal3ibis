@@ -843,41 +843,41 @@ int DAL3IBIS_read_IBIS_events(dal_element *workGRP,
 
 
     if (gti) {
-        type=DAL3_OBT;
-        status=DAL3IBISgetEventsBins(OB_TIME, &type, 1,1, &ptr_IBIS_events->obtStart, status);
-        buffSize= ptr_IBIS_events->numEvents;
-        status=DAL3IBISgetEventsBins(OB_TIME, &type, buffSize,buffSize, &ptr_IBIS_events->obtStop, status);
+        TRY_BLOCK_BEGIN
 
-        double ijds[2];
-        OBTime obts[2]={ptr_IBIS_events->obtStart,ptr_IBIS_events->obtStop};
-        status=DAL3AUXconvertOBT2IJD(workGRP, TCOR_ANY, 2, (OBTime*)obts, (double*)ijds, status);
+            type=DAL3_OBT;
+            TRY( DAL3IBISgetEventsBins(OB_TIME, &type, 1,1, &ptr_IBIS_events->obtStart, status), status,  "get OBT start");
+            buffSize= ptr_IBIS_events->numEvents;
+            TRY( DAL3IBISgetEventsBins(OB_TIME, &type, buffSize,buffSize, &ptr_IBIS_events->obtStop, status), status, "get OBT stop");
 
-        if (status != ISDC_OK) {
-          RILlogMessage(NULL, Error_1, "error converting to IJD: %i", status);
-          return status;
-        }
-          
-        RILlogMessage(NULL, Log_1, "IJD: %.15lg - %.15lg; %.5lg s", ijds[0], ijds[1],(ijds[1]-ijds[0])*24*3600);
+            double ijds[2];
+            OBTime obts[2]={ptr_IBIS_events->obtStart,ptr_IBIS_events->obtStop};
+            TRY( DAL3AUXconvertOBT2IJD(workGRP, TCOR_ANY, 2, (OBTime*)obts, (double*)ijds, status), status, "convert OBT 2 IJD");
+              
+            RILlogMessage(NULL, Log_1, "IJD: %.15lg - %.15lg; %.5lg s", ijds[0], ijds[1],(ijds[1]-ijds[0])*24*3600);
 
-        ptr_IBIS_events->ijdStart=ijds[0];
-        ptr_IBIS_events->ijdStop=ijds[1];
+            ptr_IBIS_events->ijdStart=ijds[0];
+            ptr_IBIS_events->ijdStop=ijds[1];
 
-        if ((chatter > 2) && (gti))
-            RILlogMessage(NULL, Log_0, "OBT range: %020lld , %020lld", ptr_IBIS_events->obtStart, ptr_IBIS_events->obtStop);
+            if ((chatter > 2) && (gti))
+                RILlogMessage(NULL, Log_0, "OBT range: %020lld , %020lld", ptr_IBIS_events->obtStart, ptr_IBIS_events->obtStop);
 
-        if ((ptr_IBIS_events->obtStart < 0) || (ptr_IBIS_events->obtStop < 0)) {
-            if (gti) {
-                RILlogMessage(NULL, Warning_1, "At least one OBT limit is negative.");
-                RILlogMessage(NULL, Warning_1, "Using all ScW to calculate mean bias and temperature.");
+            if ((ptr_IBIS_events->obtStart < 0) || (ptr_IBIS_events->obtStop < 0)) {
+                if (gti) {
+                    RILlogMessage(NULL, Warning_1, "At least one OBT limit is negative.");
+                    RILlogMessage(NULL, Warning_1, "Using all ScW to calculate mean bias and temperature.");
+                }
+                ptr_IBIS_events->obtStart=DAL3_NO_OBTIME;
+                ptr_IBIS_events->obtStop=DAL3_NO_OBTIME;
             }
-            ptr_IBIS_events->obtStart=DAL3_NO_OBTIME;
-            ptr_IBIS_events->obtStop=DAL3_NO_OBTIME;
-        }
+
+        TRY_BLOCK_END
     }
     else {
       ptr_IBIS_events->obtStart=DAL3_NO_OBTIME;
       ptr_IBIS_events->obtStop=DAL3_NO_OBTIME;
     }
+
     if (status != ISDC_OK) {
       RILlogMessage(NULL, Error_2, "Cannot get input data");
       break;
@@ -928,6 +928,7 @@ int DAL3IBIS_populate_newest_DS(IBIS_events_struct *ptr_IBIS_events, void * cali
 }
 
 int DAL3IBIS_populate_DS(char *dol,  void * calibration_struct, char *DS, functype_open_DS func_open_DS, functype_read_DS func_read_DS, int chatter, int status) {
+    RILlogMessage(NULL, Log_0, "");
     RILlogMessage(NULL, Log_0, "will load %s calibration from %s",DS,dol);
     dal_element *ptr_dal;
     status=(*func_open_DS)(dol,&ptr_dal,chatter,status);
@@ -937,7 +938,7 @@ int DAL3IBIS_populate_DS(char *dol,  void * calibration_struct, char *DS, functy
     
 int DAL3IBIS_populate_DS_flexible(char *dol, IBIS_events_struct *ptr_IBIS_events,  void * calibration_struct, char *DS, functype_open_DS func_open_DS, functype_read_DS func_read_DS, int chatter, int status) {
     if (strcmp(dol,"auto")==0) {
-        RILlogMessage(NULL, Log_0, "will search for bintable %s in IC tree",DS);
+        RILlogMessage(NULL, Log_0, "will search for bintable %s in IC",DS);
         return DAL3IBIS_populate_newest_DS(ptr_IBIS_events, calibration_struct, DS, func_open_DS, func_read_DS, chatter, status);
     }       
     return DAL3IBIS_populate_DS(dol,  calibration_struct, DS, func_open_DS, func_read_DS, chatter, status);

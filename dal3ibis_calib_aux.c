@@ -6,9 +6,9 @@
 #include "dal3ibis_calib_aux.h"
 
 
-int print_error(int status) {
+int explain_error(int status, char *errmsg) {
   /* If an error occurred, write a message describing the final status. */
-    char errmsg[DAL_MAX_STRING];
+ //  char errmsg[DAL_MAX_STRING];
     int saveStatus=status;
 
     char *ISDC_ENV = getenv("ISDC_ENV");
@@ -53,7 +53,10 @@ int print_error(int status) {
             *tmp2 = '\0';
 
             /* Print the message if it contains anything useful. */
-            if('\0' != *tmp) RILlogMessage(NULL, Error_2, tmp); else RILlogMessage(NULL, Error_2, "unable to interpret error code!");
+            if('\0' != *tmp)
+              ;//  RILlogMessage(NULL, Error_2, tmp);
+            else
+                RILlogMessage(NULL, Error_2, "unable to interpret error code!");
           }
           fclose(msgFile);
         }
@@ -62,3 +65,24 @@ int print_error(int status) {
         RILlogMessage(NULL, Error_2, "unable to interpret error code %i",status);
     }
 }
+
+int print_error(int status) {
+    char message[DAL_MAX_STRING];
+
+    explain_error(status, message);
+    RILlogMessage(NULL, Error_2, "%s at %s:%d", message,__FILE__, __LINE__);
+}
+
+void report_try_error(int status, int fail_status, char message[], char filename[], int line) { 
+    char error[DAL_MAX_STRING];
+
+    explain_error(status,error);
+    RILlogMessage(NULL,Error_1,"ERROR %s: %s ; %s:%i",message, error, filename, line);
+
+    if (fail_status!=status) {
+        char error[DAL_MAX_STRING];
+        explain_error(fail_status,error);
+        RILlogMessage(NULL,Error_1,"ERROR %s: new status: %s",message, error);
+    }
+}
+
