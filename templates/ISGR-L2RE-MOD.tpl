@@ -46,17 +46,17 @@ STRT_VAL	UTC_format	/ Start of validity time in UTC
 END_VAL		UTC_format	/ End of validity time in UTC (forever if empty)
 VSTART		Real		/ Start of validity time in IJD
 VSTOP		Real		/ End of validity time in IJD
-	TTYPE#	IJD		/ Amplitude Gain
-	TFORM#	1D		/ Format of column AGAIN
-	TTYPE#	PHA_OFFSET		/ Amplitude Offset
-	TFORM#	1D		/ Format of column AOFFSET
-	TTYPE#	PHA_GAIN		/ Risetime Gain
-	TFORM#	1D		/ Format of column RTGAIN
-	TTYPE#	PHA_GAIN2		/ Risetime Gain
-	TFORM#	1D		/ Format of column RTGAIN
-	TTYPE#	RT_OFFSET	/ Risetime Offset
-	TFORM#	1D		/ Format of column RTOFFSET
-	TTYPE#	RT_GAIN	/ Risetime Offset
-	TFORM#	1D		/ Format of column RTOFFSET
-	TTYPE#	RT_PHA_GAIN	/ Risetime Offset
-	TFORM#	1D		/ Format of column RTOFFSET
+	TTYPE#	IJD	
+	TFORM#	1D		
+	TTYPE#	PHA_OFFSET	
+	TFORM#	1D	
+	TTYPE#	PHA_GAIN
+	TFORM#	1D		
+	TTYPE#	PHA_GAIN2	
+	TFORM#	1D		
+	TTYPE#	RT_OFFSET
+	TFORM#	1D		
+	TTYPE#	RT_GAIN	
+	TFORM#	1D		
+	TTYPE#	RT_PHA_GAIN	
+	TFORM#	1D		

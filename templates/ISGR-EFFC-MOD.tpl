@@ -46,9 +46,9 @@ STRT_VAL	UTC_format	/ Start of validity time in UTC
 END_VAL		UTC_format	/ End of validity time in UTC (forever if empty)
 VSTART		Real		/ Start of validity time in IJD
 VSTOP		Real		/ End of validity time in IJD
-	TTYPE#	PIXEL_GROUPING	/ Amplitude Gain
-	TFORM#	1I		/ Format of column AGAIN
-	TTYPE#	PIXEL_GROUP	/ Amplitude Gain
-	TFORM#	1I		/ Format of column AGAIN
-	TTYPE#	EFFICIENCY		/ Amplitude Offset
-	TFORM#	256D		/ Format of column AOFFSET
+	TTYPE#	PIXEL_GROUPING	/ 
+	TFORM#	1I		/ 
+	TTYPE#	PIXEL_GROUP	/ 
+	TFORM#	1I		/ 
+	TTYPE#	EFFICIENCY		/ 
+	TFORM#	256D		/ 
