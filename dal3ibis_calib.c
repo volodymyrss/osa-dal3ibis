@@ -72,7 +72,7 @@
 /// this is not right!
 int doICgetNewestDOL(char * category,char * filter, double valid_time, char * DOL,int status) {
     char ic_group[DAL_MAX_STRING];
-    snprintf(ic_group,DAL_MAX_STRING,"%s/idx/ic/ic_master_file.fits[1]",getenv("CURRENT_IC"));
+    snprintf(ic_group,DAL_MAX_STRING,"%s/idx/ic/ic_master_file.fits[1]",getenv("REP_BASE_PROD")); // unsafe
     status=ICgetNewestDOL(ic_group,
             "OSA",
             category,filter,valid_time,DOL,status);
