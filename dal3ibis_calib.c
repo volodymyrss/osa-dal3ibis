@@ -463,6 +463,7 @@ inline int DAL3IBIS_reconstruct_ISGRI_energy(
         ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration,
 
         infoEvt_struct *ptr_infoEvt,
+        int pha_scale,
         int status
         ) {
 
@@ -482,14 +483,14 @@ inline int DAL3IBIS_reconstruct_ISGRI_energy(
          return -1;
     };
     
-    isgriPha+=DAL3GENrandomDoubleX1();
-    riseTime+=DAL3GENrandomDoubleX1();
+    pha = pha_scale * ( isgriPha+DAL3GENrandomDoubleX1() );
+    rt = riseTime + DAL3GENrandomDoubleX1();
 
     // 256 channels for LUT2 calibration scaled 
-    rt = 2.*riseTime/2.4+5.0;  
+    rt = 2.*rt/2.4+5.0;  
 
     rt = rt * ptr_ISGRI_energy_calibration->LUT1.rt_gain[isgriY][isgriZ] + ptr_ISGRI_energy_calibration->LUT1.rt_offset[isgriY][isgriZ];
-    pha = isgriPha * ptr_ISGRI_energy_calibration->LUT1.pha_gain[isgriY][isgriZ] + ptr_ISGRI_energy_calibration->LUT1.pha_offset[isgriY][isgriZ];
+    pha = pha * ptr_ISGRI_energy_calibration->LUT1.pha_gain[isgriY][isgriZ] + ptr_ISGRI_energy_calibration->LUT1.pha_offset[isgriY][isgriZ];
 
     // MCE correctio
     
@@ -509,6 +510,7 @@ inline int DAL3IBIS_reconstruct_ISGRI_energy(
     else if (irt >= ISGRI_LUT2_N_RT) {irt=ISGRI_LUT2_N_RT-1; ptr_infoEvt->rt_too_high++;}
 
     ipha = floor(pha);
+    
 
     if (ipha >=ISGRI_LUT2_N_PHA-1) {ipha=ISGRI_LUT2_N_PHA-2; ptr_infoEvt->pha_too_high++;}
     else if (ipha<0) {ipha=0; ptr_infoEvt->pha_too_low++;}
@@ -517,6 +519,8 @@ inline int DAL3IBIS_reconstruct_ISGRI_energy(
     *ptr_isgri_energy=ptr_ISGRI_energy_calibration->LUT2[irt+ipha*ISGRI_LUT2_N_RT];
     
     double gradient=(ptr_ISGRI_energy_calibration->LUT2[irt+(ipha+1)*ISGRI_LUT2_N_RT]-ptr_ISGRI_energy_calibration->LUT2[irt+ipha*ISGRI_LUT2_N_RT]); // ipha+1 danger
+    
+    //printf("%.5lg %.5lg\n",*ptr_isgri_energy,*ptr_isgri_pi);
     
   //  printf("at %.5lg %.5lg %.5lg\n",pha,gradient,(pha-(double)ipha));
     *ptr_isgri_energy+=gradient*(pha-(double)ipha);
@@ -543,6 +547,7 @@ inline int DAL3IBIS_reconstruct_PICsIT_energy(
         PICsIT_energy_calibration_struct *ptr_PICsIT_energy_calibration,
 
         infoEvt_struct *ptr_infoEvt,
+        int pha_scale,
         int status
         ) {
 
@@ -550,7 +555,7 @@ inline int DAL3IBIS_reconstruct_PICsIT_energy(
 
     int ipha;
     
-    pha=4. + (double)picsitPha+DAL3GENrandomDoubleX1();
+    pha=pha_scale * ( (double)picsitPha + DAL3GENrandomDoubleX1()); 
 
     int pixelNo =  64*(int)picsitY + (int)picsitZ;
 
@@ -591,6 +596,7 @@ int DAL3IBIS_reconstruct_Compton_energies(
                 ptr_ISGRI_energy_calibration,
 
                 &ptr_IBIS_events->infoEvt,
+                8,
                 status
                 );
         
@@ -604,6 +610,7 @@ int DAL3IBIS_reconstruct_Compton_energies(
                 ptr_PICsIT_energy_calibration,
 
                 &ptr_IBIS_events->infoEvt,
+                4,
                 status
                 );
     }
@@ -647,6 +654,7 @@ int DAL3IBIS_reconstruct_ISGRI_energies(
                 ptr_ISGRI_energy_calibration,
 
                 &ptr_IBIS_events->infoEvt,
+                1,
                 status
                 );
     }
@@ -704,6 +712,8 @@ int DAL3IBIS_init_ISGRI_energy_calibration(ISGRI_energy_calibration_struct *ptr_
     status=allocate_2d((void ***)&ptr_ISGRI_energy_calibration->LUT1.pha_offset, 128, 128, sizeof(double),status);
     status=allocate_2d((void ***)&ptr_ISGRI_energy_calibration->LUT1.rt_gain, 128, 128, sizeof(double),status);
     status=allocate_2d((void ***)&ptr_ISGRI_energy_calibration->LUT1.rt_offset, 128, 128, sizeof(double),status);
+    
+    status=DAL_GC_allocateDataBuffer((void **)&(ptr_ISGRI_energy_calibration->LUT2), ISGRI_LUT2_N_RT*ISGRI_LUT2_N_PHA*sizeof(double), status,"LUT2 evolution IJD");
 
     status=DAL_GC_allocateDataBuffer((void **)&(ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.ijd), ISGRI_REVO_N*sizeof(double), status,"LUT2 evolution IJD");
     status=DAL_GC_allocateDataBuffer((void **)&(ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.pha_gain), ISGRI_REVO_N*sizeof(double), status,"LUT2 evolution PHA gain");
@@ -1147,7 +1157,7 @@ int DAL3IBIS_read_LUT2(dal_element **ptr_ptr_dal_LUT2, ISGRI_energy_calibration_
 
     TRY_BLOCK_BEGIN
 
-        TRY( DAL_GC_allocateDataBuffer((void **)&ptr_ISGRI_energy_calibration->LUT2, ISGRI_LUT2_N_RT*ISGRI_LUT2_N_PHA*sizeof(double), status, "LUT2"), 0, "allocating LUT2");
+     //   TRY( DAL_GC_allocateDataBuffer((void **)&ptr_ISGRI_energy_calibration->LUT2, ISGRI_LUT2_N_RT*ISGRI_LUT2_N_PHA*sizeof(double), status, "LUT2"), 0, "allocating LUT2");
     
         TRY( DALtableGetNumRows(*ptr_ptr_dal_LUT2,&numRows,status) , -1, "getting Num Rows for %s",DS_ISGR_LUT2);
         if (chatter > 3) RILlogMessage(NULL, Log_0, "%s rows %li...",DS_ISGR_LUT2,numRows);

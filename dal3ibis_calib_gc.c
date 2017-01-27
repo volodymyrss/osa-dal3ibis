@@ -21,20 +21,23 @@ void DAL_GC_print() {
     }
 }
 
-void DAL_GC_free_all() {
-    int i,status;
+int DAL_GC_free_all(int chatter, int status) {
+    int i;
 
     for (i=DAL_GC.n_entries-1;i>=0;i--) {
         if (DAL_GC.allocations[i].resource_kind == DAL_GC_MEMORY_RESOURCE) {
-            RILlogMessage(NULL,Log_0,"GC to free resource memory: %s",DAL_GC.allocations[i].comment);
+            if (chatter>6)
+                RILlogMessage(NULL,Log_0,"GC to free resource memory: %s",DAL_GC.allocations[i].comment);
             free(DAL_GC.allocations[i].ptr);
         } else if (DAL_GC.allocations[i].resource_kind == DAL_GC_DAL_OBJECT_RESOURCE) {
-            RILlogMessage(NULL,Log_0,"GC to free resource DAL object: %s",DAL_GC.allocations[i].comment);
+            if (chatter>6)
+                RILlogMessage(NULL,Log_0,"GC to free resource DAL object: %s",DAL_GC.allocations[i].comment);
             status=DALobjectClose((dal_object)(DAL_GC.allocations[i].ptr), DAL_SAVE, ISDC_OK);
         } else {
         };
     }
-    
+
+    return status;
 }
 
 int DAL_GC_allocateDataBuffer(void **buffer, 

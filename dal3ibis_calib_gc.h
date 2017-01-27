@@ -22,7 +22,7 @@ void DAL_GC_register_allocation(void *ptr,
 
 void DAL_GC_print();
 
-void DAL_GC_free_all();
+int DAL_GC_free_all(int chatter, int status);
 
 int DAL_GC_allocateDataBuffer(void **buffer, 
                               long buffSize, 
