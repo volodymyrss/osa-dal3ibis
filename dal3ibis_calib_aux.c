@@ -5,6 +5,7 @@
 #include "ril.h"
 #include "dal3ibis_calib_aux.h"
 
+///// aux output
 
 int explain_error(int status, char *errmsg) {
   /* If an error occurred, write a message describing the final status. */
@@ -85,4 +86,8 @@ void report_try_error(int status, int fail_status, char message[], char filename
         RILlogMessage(NULL,Error_1,"ERROR %s: new status: %s",message, error);
     }
 }
+
+
+///// aux output
+
 

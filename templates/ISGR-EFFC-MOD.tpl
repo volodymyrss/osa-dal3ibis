@@ -15,12 +15,6 @@
 #V1
 #
 #CHANGES
-# 1.5   : Template creation
-# 2.0.1 : Added the keywords needed for instrum. charact. files:
-#       : VERSION, FILENAME, LOCATN, RESPONSI, STRT_VAL, END_VAL,
-#       : VSTART, VSTOP, MJDREF, TIMESYS, TIMEUNIT and TIMEREF
-# 3.3   : Template put under Configuration Control
-# 4.0   : Changed column formats to 1E and added PIXTYPE column (SCREW-00519)
 #
 ################################################################################
 XTENSION	BINTABLE	/ Binary table extension

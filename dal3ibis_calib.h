@@ -9,6 +9,34 @@
 /*                                                                           */
 /*****************************************************************************/
 
+#include "isdc.h"
+
+#define I_ISGR_RANGE                          (I_ERROR_CODE_START-20000)
+#define I_ISGR_SCW_ERR                        (I_ISGR_RANGE-1000)
+#define I_ISGR_OSM_ERR                        (I_ISGR_SCW_ERR-200)
+#define ERR_ISGR_OSM_UNUSED                   (I_ISGR_OSM_ERR-1)    // Unused error                               
+#define ERR_ISGR_OSM_TABLE_EMPTY              (I_ISGR_OSM_ERR-2)    // Data table is empty                        
+#define ERR_ISGR_OSM_NROWS_NVALUES            (I_ISGR_OSM_ERR-3)    // Number of rows != number of values         
+#define ERR_ISGR_OSM_DEREFERENCE              (I_ISGR_OSM_ERR-4)    // Dereferencing error                        
+#define ERR_ISGR_OSM_FILE_NOTFOUND            (I_ISGR_OSM_ERR-5)    // Data i/o file not found => continue        
+#define ERR_ISGR_OSM_FILE_NECESSARY_NOTFOUND  (I_ISGR_OSM_ERR-6)    // Data necessary i/o file not found => abort 
+#define ERR_ISGR_OSM_OUTPUT_FILE_CREATION     (I_ISGR_OSM_ERR-7)    // Output file creation error => abort        
+#define ERR_ISGR_OSM_OUTPUT_INDEX_CREATION    (I_ISGR_OSM_ERR-8)    // Index file creation error => abort         
+#define ERR_ISGR_OSM_MEMORY_ALLOC             (I_ISGR_OSM_ERR-9)    // Memmory allocation error                   
+#define ERR_ISGR_OSM_SHD_INDX                 (I_ISGR_OSM_ERR-10)   // Shadowgram index does not exist            
+#define ERR_ISGR_OSM_EFFI_SHD_INDX            (I_ISGR_OSM_ERR-11)   // Shadowgram efficiency index does not exist 
+#define ERR_ISGR_OSM_DSP_INDX                 (I_ISGR_OSM_ERR-12)   // Spectral index does not exist              
+#define ERR_ISGR_OSM_LCR_INDX                 (I_ISGR_OSM_ERR-13)   // Light curve index does not exist           
+#define ERR_ISGR_OSM_WRITE_STATITICS          (I_ISGR_OSM_ERR-14)   // Impossible to write statistics             
+#define ERR_ISGR_OSM_WRITE_SHADOWGRAM         (I_ISGR_OSM_ERR-15)   // Impossible to write image                  
+#define ERR_ISGR_OSM_WRITE_EFFICIENCY_SHD     (I_ISGR_OSM_ERR-16)   // Impossible to write image efficiency       
+#define ERR_ISGR_OSM_WRITE_SPECTRA            (I_ISGR_OSM_ERR-17)   // Impossible to write spectra                
+#define ERR_ISGR_OSM_WRITE_EFFICIENCY_DSP     (I_ISGR_OSM_ERR-18)   // Impossible to write spectra efficiency     
+#define ERR_ISGR_OSM_WRITE_LIGHTCURVES        (I_ISGR_OSM_ERR-19)   // Impossible to write lightcurve             
+#define ERR_ISGR_OSM_WRITE_EFFICIENCY_LCR     (I_ISGR_OSM_ERR-20)   // Impossible to write lightcurve efficiency  
+#define ERR_ISGR_OSM_DATA_INCONSISTENCY       (I_ISGR_OSM_ERR-21)   // Some data inconsistency                    
+
+
 
 #define TRY_BLOCK_BEGIN  do { 
 #define TRY_BLOCK_END } while(0);
@@ -46,13 +74,13 @@
 // keep band treatement separate
 #define N_E_BAND 256 
 
-double E_band_min[N_E_BAND];
-double E_band_max[N_E_BAND];
+static double E_band_min[N_E_BAND];
+static double E_band_max[N_E_BAND];
 
 #define E_BAND_N_REVERSE 2048
 #define E_BAND_REVERSE_STEP 0.5
 
-int E_band_reverse[E_BAND_N_REVERSE];
+static int E_band_reverse[E_BAND_N_REVERSE];
 
 inline double get_E_min(int ch);
 inline double get_E_max(int ch);
@@ -114,7 +142,15 @@ typedef struct ISGRI_efficiency_struct {
 
     double MCE_efficiency[N_MCE][N_E_BAND]; // energy-dependent
     double LT_efficiency[N_LT][N_E_BAND]; // energy-dependent, per LT class
+
+    double LT_mapping[N_LT];
+
+    double LT_map[ISGRI_N_PIXEL_Y][ISGRI_N_PIXEL_Z];
+    int LT_map_indexed[ISGRI_N_PIXEL_Y][ISGRI_N_PIXEL_Z];
+
     //double pixel_efficiency[ISGRI_N_PIXEL_Y][ISGRI_N_PIXEL_Z]; // grey, also used to kill pixels
+    
+
 
 } ISGRI_efficiency_struct;
 
@@ -168,6 +204,7 @@ int DAL3IBIS_MceIsgriHkCal(dal_element *workGRP,
         int          status);
 
 int print_error(int status);
+
 int explain_error(int status,  char *error);
 
 typedef int (*functype_open_DS)(char *, dal_element **, int , int);
@@ -199,10 +236,20 @@ int DAL3IBIS_read_IBIS_events(dal_element *workGRP,
         int status
         );
 
+int DAL3IBIS_read_REV_context_maps(dal_element   *REVcontext,       // DOL to the REV context
+        int           Revol,             // Revolution number of the SCW
+        OBTime        OBTend,            // End Time of the SCW
+        dal_double    **LowThreshMap,    // Output: Map of Low Thresholds (keV)
+        dal_int       **ONpixelsREVmap,  // Output: Map of Pixels Status for this REV
+        ISGRI_efficiency_struct *ptr_ISGRI_efficiency,
+        unsigned char chatter);
 
+int DAL3IBIS_get_ISGRI_efficiency(double energy, int y, int z, ISGRI_efficiency_struct *ptr_ISGRI_efficiency, double *ptr_efficiency, int chatter, int status);
+
+int DAL3IBIS_populate_DS(char *dol,  void * calibration_struct, char *DS, functype_open_DS func_open_DS, functype_read_DS func_read_DS, int chatter, int status);
 
 #ifndef __CINT__
 #ifdef __cplusplus
-}
+//}
 #endif
 #endif

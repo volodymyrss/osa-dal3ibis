@@ -1,6 +1,10 @@
 #include "dal3ibis_calib_ebands.h"
 
-int setup_E_bands() {
+// this is all hard-coded to avoid reading an extra file
+// this is all hard-coded because templates enforce 256 bins anyway
+// this is all hard-coded because background maps are provided in the same bins
+
+int C256_setup_E_bands() {
     int bin;
     double DeltaE=0.;
     int i;
@@ -23,17 +27,17 @@ int setup_E_bands() {
 
 }
 
-inline double get_E_min(int ch) {
+inline double C256_get_E_min(int ch) {
     if ( ch<0 || ch>=N_E_BAND ) return 0.; 
     return (double)E_band_min[ch];
 }
 
-inline double get_E_max(int ch) {
+inline double C256_get_E_max(int ch) {
     if ( ch<0 || ch>=N_E_BAND ) return 0.; 
     return E_band_max[ch];
 }
 
-inline int get_channel(double energy) {
+inline int C256_get_channel(double energy) {
     int r_ch;
     int ch;
 

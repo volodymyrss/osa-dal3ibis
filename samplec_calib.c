@@ -78,21 +78,12 @@ int main(int arg, char *argv[]) {
   status=ISDC_OK;
 
   TRY_BLOCK_BEGIN
-      setup_E_bands();
-
-      double x;
-
-      for (x=0;x<3;x+=0.1) {
-        double en=pow(10,x);
-        int ch=get_channel(en);
-        double en1=E_band_min[ch];
-        double en2=E_band_max[ch];
-        printf("en:%.5lg ch:%i er: %g - %g\n",en,ch,get_E_min(ch),get_E_max(ch));
-      }
 
       TRY(RILinit(&fileRef, "", OUT_ALL, "Default"),status,"RILinit");
 
       printf("OBJECT            : %s\n",argv[1]);
+
+      C256_setup_E_bands();
 
       OBT_num=0;
       type=DAL_LONG;
@@ -108,11 +99,19 @@ int main(int arg, char *argv[]) {
 
       TRY( DAL3IBIS_read_IBIS_events(DAL_DS,COMPTON_SGLE,&IBIS_events,1,chatter,status), 0, "reading Compton events"); 
       //TRY( DAL3IBIS_read_IBIS_events(DAL_DS,ISGRI_EVTS,&IBIS_events,1,chatter,status), 0, "reading ISGRI events"); 
+      
+
+      TRY( DAL3IBIS_populate_newest_DS(&IBIS_events, &ISGRI_efficiency, DS_ISGR_EFFC,  &DAL3IBIS_open_EFFC, &DAL3IBIS_read_EFFC,chatter,status), status, "efficiency" );
+
+      double x=10;
+      for (x=10; x<800; x*=1.1) {
+        double f;
+        TRY( DAL3IBIS_get_ISGRI_efficiency(x,0,0,&ISGRI_efficiency,&f,chatter,status), status, "getting efficiecy");
+        RILlogMessage(NULL,Log_0,"%.5lg %.5lg\n",x,f);
+      }
 
       TRY( DAL3IBIS_init_ISGRI_energy_calibration(&ISGRI_energy_calibration,status), status, "initializing ISGRI energy calibration");
       TRY( DAL3IBIS_init_PICsIT_energy_calibration(&PICsIT_energy_calibration,status), status, "initializing PICsIT energy calibration");
-      
-      TRY( DAL3IBIS_populate_newest_DS(&IBIS_events, &PICsIT_energy_calibration, DS_PICS_GO, &DAL3IBIS_open_PICsIT_GO, &DAL3IBIS_read_PICsIT_GO, chatter,status), status, "PICsIT GO" );
 
       TRY( DAL3IBIS_populate_newest_DS(&IBIS_events, &ISGRI_energy_calibration, DS_ISGR_LUT1, &DAL3IBIS_open_LUT1, &DAL3IBIS_read_LUT1,chatter,status), status, "reading LUT1" );
       TRY( DAL3IBIS_correct_LUT1_for_temperature_bias(DAL_DS,&ISGRI_energy_calibration,&IBIS_events,chatter,status), status, "correcting for LUT1 temperature bias");
@@ -122,11 +121,13 @@ int main(int arg, char *argv[]) {
       TRY( DAL3IBIS_populate_newest_DS(&IBIS_events, &ISGRI_energy_calibration, DS_ISGR_L2RE, &DAL3IBIS_open_L2RE, &DAL3IBIS_read_L2RE, chatter,status), status, "loading LUT2 rapid evolution" );
       
       TRY( DAL3IBIS_reconstruct_ISGRI_energies(&ISGRI_energy_calibration,&IBIS_events,chatter,status), status, "reconstructing energies");
-
-      TRY( DAL3IBIS_populate_newest_DS(&IBIS_events, &ISGRI_efficiency, DS_ISGR_EFFC,  &DAL3IBIS_open_EFFC, &DAL3IBIS_read_EFFC,chatter,status), status, "efficiency" );
+      
+      TRY( DAL3IBIS_populate_newest_DS(&IBIS_events, &PICsIT_energy_calibration, DS_PICS_GO, &DAL3IBIS_open_PICsIT_GO, &DAL3IBIS_read_PICsIT_GO, chatter,status), status, "PICsIT GO" );
       
       TRY( DAL3IBIS_reconstruct_ISGRI_energies(&ISGRI_energy_calibration,&IBIS_events,chatter,status), status, "reconstructing energies");
       TRY( DAL3IBIS_reconstruct_Compton_energies(&ISGRI_energy_calibration,&PICsIT_energy_calibration,&IBIS_events,chatter,status), status, "reconstructing energies");
+      
+      
       
 
   TRY_BLOCK_END

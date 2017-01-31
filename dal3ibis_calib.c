@@ -72,7 +72,7 @@
 /// this is not right!
 int doICgetNewestDOL(char * category,char * filter, double valid_time, char * DOL,int status) {
     char ic_group[DAL_MAX_STRING];
-    snprintf(ic_group,DAL_MAX_STRING,"%s/idx/ic/ic_master_file.fits[1]",getenv("REP_BASE_PROD")); // unsafe
+    snprintf(ic_group,DAL_MAX_STRING,"%s/idx/ic/ic_master_file.fits[1]",getenv("CURRENT_IC")); // unsafe
     status=ICgetNewestDOL(ic_group,
             "OSA",
             category,filter,valid_time,DOL,status);
@@ -87,6 +87,7 @@ double slopeMCE[8]={-1.8,-2.0,-2.3,-2.7,-0.5,-2.4,-0.8,-0.5} ;
 // implements temperature and bias dependency additional to the existing LUT1
 // (note that bias is forced to be 1.2, see DAL3IBIS_MceIsgriHkCal)
 // also this slightly interferes with the revolution-scale MCE correction
+
 int DAL3IBIS_correct_LUT1_for_temperature_bias(
         dal_element *workGRP,
         ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration,
@@ -520,9 +521,6 @@ inline int DAL3IBIS_reconstruct_ISGRI_energy(
     
     double gradient=(ptr_ISGRI_energy_calibration->LUT2[irt+(ipha+1)*ISGRI_LUT2_N_RT]-ptr_ISGRI_energy_calibration->LUT2[irt+ipha*ISGRI_LUT2_N_RT]); // ipha+1 danger
     
-    //printf("%.5lg %.5lg\n",*ptr_isgri_energy,*ptr_isgri_pi);
-    
-  //  printf("at %.5lg %.5lg %.5lg\n",pha,gradient,(pha-(double)ipha));
     *ptr_isgri_energy+=gradient*(pha-(double)ipha);
     
 
@@ -899,20 +897,8 @@ int DAL3IBIS_read_IBIS_events(dal_element *workGRP,
   if (status == ISDC_OK)
     RILlogMessage(NULL, Log_2, "ISGRI event information successfully extracted %i",status);
 
-  ptr_IBIS_events->infoEvt.good=0;
-  ptr_IBIS_events->infoEvt.bad_pixel_yz=0;
-  ptr_IBIS_events->infoEvt.rt_too_low=0;
-  ptr_IBIS_events->infoEvt.rt_too_high=0;
-  ptr_IBIS_events->infoEvt.pha_too_low=0;
-  ptr_IBIS_events->infoEvt.pha_too_high=0;
-  ptr_IBIS_events->infoEvt.negative_energy=0;
-
   return status;
 }
-
-//typedef int (*populate_newest_DS)(IBIS_events_struct*, void*, int, int);
-/*typedef int (*functype_open_DS)(char *LUT1, dal_element **ptr_ptr_dal_LUT1, int chatter,int status);
-typedef int (*functype_read_DS)(dal_element **ptr_dal_LUT1, void *calibration_struct, int chatter, int status);*/
 
 int DAL3IBIS_populate_newest_DS(IBIS_events_struct *ptr_IBIS_events, void * calibration_struct, char *DS, functype_open_DS func_open_DS, functype_read_DS func_read_DS, int chatter, int status) {
     char dol_start[DAL_MAX_STRING];
@@ -1419,7 +1405,6 @@ int DAL3IBIS_read_EFFC(dal_element **ptr_ptr_dal_EFFC, ISGRI_efficiency_struct *
             RILlogMessage(NULL, Error_1, "too many pixel groups %li",numRows);
             return -1;
         }
-
         
         type=DAL_INT;
         TRY( DALtableGetCol(*ptr_ptr_dal_EFFC, NULL, 1, &type, NULL, (void *)(pixel_grouping), status), -1, "reading pixel grouping" );
@@ -1444,13 +1429,25 @@ int DAL3IBIS_read_EFFC(dal_element **ptr_ptr_dal_EFFC, ISGRI_efficiency_struct *
                 continue;
             }
 
-            if ((pixel_group[i]<0) || (pixel_group[i]>=maxgroup)) {
+            if ((pixel_group[i]>=maxgroup)) {
                 RILlogMessage(NULL, Error_1, "invalid group %i for grouping %i max %i",pixel_group[i],pixel_grouping[i],maxgroup);
                 continue;
             }
-               
-            for (j=0;j<N_E_BAND;j++)
-                (*((double (*)[maxgroup][N_E_BAND])eff))[pixel_group[i]][j]=efficiency[i][j];
+
+            if (pixel_group[i]<0) {
+                RILlogMessage(NULL, Log_0, "groupping %i contains mapping of size %i",pixel_grouping[i],-pixel_group[i]);
+
+                if (pixel_grouping[i] == PIXEL_GROUPING_LT) { // so far only LT mapping allowed
+                    if (-pixel_group[i] > N_LT) 
+                        return -1; // !!
+                    for (j=0;j<-pixel_group[i];j++) 
+                        ptr_ISGRI_efficiency->LT_mapping[j]=efficiency[i][j];
+                }
+                //else ignore
+            } else {
+                for (j=0;j<N_E_BAND;j++)
+                    (*((double (*)[maxgroup][N_E_BAND])eff))[pixel_group[i]][j]=efficiency[i][j];
+            }
         }
 
     TRY_BLOCK_END
@@ -1458,6 +1455,139 @@ int DAL3IBIS_read_EFFC(dal_element **ptr_ptr_dal_EFFC, ISGRI_efficiency_struct *
     
     return status;
 }
+
+inline int get_LT_index(double LT, ISGRI_efficiency_struct *ptr_ISGRI_efficiency) {
+    int i;
+    for (i=0;i<N_LT;i++) {
+        if ( ptr_ISGRI_efficiency->LT_mapping[i] == LT ) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int DAL3IBIS_get_ISGRI_efficiency(double energy, int y, int z, ISGRI_efficiency_struct *ptr_ISGRI_efficiency, double *ptr_efficiency, int chatter, int status) {
+    int channel;
+    int LT_index;
+    int mce;
+
+    LT_index=ptr_ISGRI_efficiency->LT_map_indexed[y][z];
+    if (LT_index < 0)
+        return 0;
+    
+    channel=C256_get_channel(energy);
+
+    mce=yz_to_mce(y,z);
+        
+    *ptr_efficiency=ptr_ISGRI_efficiency->MCE_efficiency[mce][channel];
+
+    *ptr_efficiency*=ptr_ISGRI_efficiency->LT_efficiency[LT_index][channel];
+
+    return status;
+}
+
+int DAL3IBIS_read_REV_context_maps(dal_element   *REVcontext,       // DOL to the REV context
+        int           Revol,             // Revolution number of the SCW
+        OBTime        OBTend,            // End Time of the SCW
+        dal_double    **LowThreshMap,    // Output: Map of Low Thresholds (keV)
+        dal_int       **ONpixelsREVmap,  // Output: Map of Pixels Status for this REV
+        ISGRI_efficiency_struct *ptr_ISGRI_efficiency,
+        unsigned char chatter)
+{
+    int	    
+        status= ISDC_OK,
+        RILstatus= ISDC_OK;
+        
+    int y,z;
+
+    // ===================================================
+    //      Retrieve and convert Low Thresholds map
+    // ===================================================
+        
+    RILstatus= RILlogMessage(NULL,Log_0,"Getting Revolution LowThresholds in DAL3IBIS");
+
+    // Allocation
+    float *BufferF= NULL;
+    if((BufferF= (float*)calloc(ISGRI_SIZE*ISGRI_SIZE, sizeof(float)))==NULL) {
+        RILstatus= RILlogMessage(NULL,Error_1,"Error in allocating memory for LowThreshold buffer.");
+        return ERR_ISGR_OSM_MEMORY_ALLOC;
+    }
+
+    // Use Dal3Ibis library: LT(keV) are set to 0 if LT(step) is dummy or 63 (noisy pixel)
+    if((status= DAL3IBISGetlowthresholdKev(REVcontext,OBTend,BufferF,status))!=ISDC_OK) {
+        RILstatus= RILlogMessage(NULL,Error_1,"Getting Revolution LowThresholds failed, status %d.",status);
+        // SCREW 1746: if reading failed, set to average value (depends on Revol)
+        double MeanLT= 18.2;
+        if(Revol>55) MeanLT= 17.2;
+        if(Revol>256) MeanLT= 15.3;
+        RILstatus= RILlogMessage(NULL,Warning_1,"All Pixels LowThresholds set to %2.1fkeV.",MeanLT);
+        for(y=0;y<ISGRI_SIZE;y++)
+            for(z=0;z<ISGRI_SIZE;z++) 
+                LowThreshMap[y][z]= MeanLT;
+        RILstatus= RILlogMessage(NULL,Warning_1,"Reverting to ISDC_OK.");
+        status= ISDC_OK;
+    } else {
+        // Rearrange buffer into matrix
+        for(y=0;y<ISGRI_SIZE;y++) {
+            for(z=0;z<ISGRI_SIZE;z++) {	    
+                LowThreshMap[y][z]= BufferF[z*ISGRI_SIZE+y];
+            }
+        }
+    }
+        
+    /// this is not too good at all
+    for(y=0;y<ISGRI_SIZE;y++) {
+        for(z=0;z<ISGRI_SIZE;z++) {	    
+            ptr_ISGRI_efficiency->LT_map[y][z]=LowThreshMap[y][z];
+            ptr_ISGRI_efficiency->LT_map_indexed[y][z]=get_LT_index(ptr_ISGRI_efficiency->LT_map[y][z], ptr_ISGRI_efficiency);
+        }
+    }
+
+    if(BufferF) { free(BufferF); BufferF= NULL; }
+
+
+    // ===================================================
+    //     Retrieve Initial Pixel status on this REV
+    // ===================================================
+
+    // Retrieve map
+    DAL3_Byte BufferB[ISGRI_SIZE][ISGRI_SIZE];
+    if((status= DAL3IBISctxtGetImaPar(REVcontext, &OBTend, ISGRI_PIX_STA, BufferB, status)) !=ISDC_OK )
+    {
+        RILstatus= RILlogMessage(NULL,Warning_1,"Error finding Pixels Initial Status, error= %d.", 
+                ERR_ISGR_OSM_FILE_NECESSARY_NOTFOUND);
+        RILstatus= RILlogMessage(NULL,Warning_1,"All Pixels status initialized to ON.");
+        for(y=0;y<ISGRI_SIZE;y++)
+            for(z=0;z<ISGRI_SIZE;z++) 
+                ONpixelsREVmap[y][z]= 1;
+        RILstatus= RILlogMessage(NULL,Warning_1,"Reverting to ISDC_OK to continue.");
+        status= ISDC_OK;
+    } else {
+        for(y=0;y<ISGRI_SIZE;y++)
+            for(z=0;z<ISGRI_SIZE;z++) 
+                ONpixelsREVmap[y][z]= BufferB[z][y];
+    }
+
+    if(chatter>3) {
+        int 
+            NumON=0,
+            NumBadLT=0;
+        for(y=0;y<ISGRI_SIZE;y++)
+            for(z=0;z<ISGRI_SIZE;z++)
+            {
+                // Pixels ON at initial REV status
+                if(ONpixelsREVmap[y][z])
+                    NumON++;
+                // Pixels that switched during the SCW
+                if(LowThreshMap[y][z]<1e-10)
+                    NumBadLT++;
+            }
+        RILstatus= RILlogMessage(NULL, Log_1, "REV stats: NumPixelsON= %d, NumBadLT= %d.", NumON,NumBadLT);
+    }
+
+    return status;
+}
+
 
 
 /// picsit
