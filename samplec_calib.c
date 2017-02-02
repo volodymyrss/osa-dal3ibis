@@ -127,8 +127,6 @@ int main(int arg, char *argv[]) {
       TRY( DAL3IBIS_reconstruct_ISGRI_energies(&ISGRI_energy_calibration,&IBIS_events,chatter,status), status, "reconstructing energies");
       TRY( DAL3IBIS_reconstruct_Compton_energies(&ISGRI_energy_calibration,&PICsIT_energy_calibration,&IBIS_events,chatter,status), status, "reconstructing energies");
       
-      
-      
 
   TRY_BLOCK_END
   

@@ -64,3 +64,7 @@ of DAL3IBIS are under his responsin\bility, while integration and deliveries is
 done by S.Paltani.  
 
 
+All files containing "calib" in their names are part of the IBIS calibation, 
+and have been developed. Development and testing of this part 
+of DAL3IBIS are under responsin\bility, while integration and deliveries is
+done.  
