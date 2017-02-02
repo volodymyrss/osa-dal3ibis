@@ -139,7 +139,13 @@
 #ifndef DAL3IBIS_INCLUDE
 #define DAL3IBIS_INCLUDE
 
-static const char * dal3ibisversion[] = {"ISDC component dal3ibis 5.5"};
+#include "git_version.h"
+
+#ifndef GIT_VERSION
+#define GIT_VERSION ""
+#endif
+
+static const char * dal3ibisversion[] = {"ISDC component dal3ibis 5.5" GIT_VERSION};
 
 	/* DAL3IBIS ERROR                                                    */
 

@@ -41,7 +41,7 @@
 #define TRY_BLOCK_BEGIN  do { 
 #define TRY_BLOCK_END } while(0);
 #define TRY(call,fail_status,...) if ( (status=call) != ISDC_OK ) { char message[DAL_MAX_STRING]; sprintf(message,##__VA_ARGS__); report_try_error(status,fail_status,message,__FILE__,__LINE__); break;}
-#define FAIL(status,...) { char message[DAL_MAX_STRING]; sprintf(message,##__VA_ARGS__); report_try_error(status,status,message,__FILE__,__LINE__); break;}
+#define FAIL(fail_status,...) {  status=fail_status; char message[DAL_MAX_STRING]; sprintf(message,##__VA_ARGS__); report_try_error(status,status,message,__FILE__,__LINE__); break;}
 
 
 
