@@ -493,7 +493,7 @@ inline int DAL3IBIS_reconstruct_ISGRI_energy(
     rt = rt * ptr_ISGRI_energy_calibration->LUT1.rt_gain[isgriY][isgriZ] + ptr_ISGRI_energy_calibration->LUT1.rt_offset[isgriY][isgriZ];
     pha = pha * ptr_ISGRI_energy_calibration->LUT1.pha_gain[isgriY][isgriZ] + ptr_ISGRI_energy_calibration->LUT1.pha_offset[isgriY][isgriZ];
 
-    // MCE correctio
+    // MCE correction
     
     mce     = yz_to_mce(isgriY,isgriZ);
 
@@ -905,6 +905,7 @@ int DAL3IBIS_populate_newest_DS(IBIS_events_struct *ptr_IBIS_events, void * cali
     char dol_stop[DAL_MAX_STRING];
 
     TRY_BLOCK_BEGIN
+        RILlogMessage(NULL,Log_0,"Will search for %s for IJD %.15lg and %.15lg",DS,ptr_IBIS_events->ijdStart,ptr_IBIS_events->ijdStop);
 
         TRY( doICgetNewestDOL(DS,"",ptr_IBIS_events->ijdStart,dol_start,status) ,-1, "searching for %s",DS);
         TRY( doICgetNewestDOL(DS,"",ptr_IBIS_events->ijdStop,dol_stop,status) ,-1,  "searching for %s",DS);

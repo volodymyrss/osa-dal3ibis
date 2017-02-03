@@ -71,7 +71,7 @@ int main(int arg, char *argv[]) {
   void *buffer;
 
   char DOL[255];
-  int chatter=5;
+  int chatter=10;
 
   LogFile     fileRef;
 
@@ -96,19 +96,11 @@ int main(int arg, char *argv[]) {
       PICsIT_energy_calibration_struct PICsIT_energy_calibration;
       ISGRI_efficiency_struct ISGRI_efficiency;
 
-
       TRY( DAL3IBIS_read_IBIS_events(DAL_DS,COMPTON_SGLE,&IBIS_events,1,chatter,status), 0, "reading Compton events"); 
       //TRY( DAL3IBIS_read_IBIS_events(DAL_DS,ISGRI_EVTS,&IBIS_events,1,chatter,status), 0, "reading ISGRI events"); 
-      
 
       TRY( DAL3IBIS_populate_newest_DS(&IBIS_events, &ISGRI_efficiency, DS_ISGR_EFFC,  &DAL3IBIS_open_EFFC, &DAL3IBIS_read_EFFC,chatter,status), status, "efficiency" );
 
-      double x=10;
-      for (x=10; x<800; x*=1.1) {
-        double f;
-        TRY( DAL3IBIS_get_ISGRI_efficiency(x,0,0,&ISGRI_efficiency,&f,chatter,status), status, "getting efficiecy");
-        RILlogMessage(NULL,Log_0,"%.5lg %.5lg\n",x,f);
-      }
 
       TRY( DAL3IBIS_init_ISGRI_energy_calibration(&ISGRI_energy_calibration,status), status, "initializing ISGRI energy calibration");
       TRY( DAL3IBIS_init_PICsIT_energy_calibration(&PICsIT_energy_calibration,status), status, "initializing PICsIT energy calibration");
@@ -131,7 +123,8 @@ int main(int arg, char *argv[]) {
   TRY_BLOCK_END
   
   //DAL_GC_print();
-  DAL_GC_free_all();
+
+//  status=DAL_GC_free_all(chatter,status);
 
 //status=DALobjectClose(DAL_DS,DAL_SAVE,status);
   printf("Final status: %d\n",status);
