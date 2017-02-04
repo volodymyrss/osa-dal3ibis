@@ -143,6 +143,8 @@ typedef struct ISGRI_efficiency_struct {
     double MCE_efficiency[N_MCE][N_E_BAND]; // energy-dependent
     double LT_efficiency[N_LT][N_E_BAND]; // energy-dependent, per LT class
 
+    double LT_approximation;
+
     double LT_mapping[N_LT];
 
     double LT_map[ISGRI_N_PIXEL_Y][ISGRI_N_PIXEL_Z];
@@ -247,6 +249,8 @@ int DAL3IBIS_read_REV_context_maps(dal_element   *REVcontext,       // DOL to th
 int DAL3IBIS_get_ISGRI_efficiency(double energy, int y, int z, ISGRI_efficiency_struct *ptr_ISGRI_efficiency, double *ptr_efficiency, int chatter, int status);
 
 int DAL3IBIS_populate_DS(char *dol,  void * calibration_struct, char *DS, functype_open_DS func_open_DS, functype_read_DS func_read_DS, int chatter, int status);
+int DAL3IBIS_populate_DS_flexible_IJD(char *dol, double ijdStart, double ijdStop,  void * calibration_struct, char *DS, functype_open_DS func_open_DS, functype_read_DS func_read_DS, int chatter, int status);
+int DAL3IBIS_populate_EFFC_flexible_IJD(char *dol, double ijdStart, double ijdStop,  void * calibration_struct, char *DS, int chatter, int status);
 
 #ifndef __CINT__
 #ifdef __cplusplus

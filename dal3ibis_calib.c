@@ -900,22 +900,22 @@ int DAL3IBIS_read_IBIS_events(dal_element *workGRP,
   return status;
 }
 
-int DAL3IBIS_populate_newest_DS(IBIS_events_struct *ptr_IBIS_events, void * calibration_struct, char *DS, functype_open_DS func_open_DS, functype_read_DS func_read_DS, int chatter, int status) {
+int DAL3IBIS_populate_newest_DS(double ijdStart, double ijdStop, void * calibration_struct, char *DS, functype_open_DS func_open_DS, functype_read_DS func_read_DS, int chatter, int status) {
     char dol_start[DAL_MAX_STRING];
     char dol_stop[DAL_MAX_STRING];
 
     TRY_BLOCK_BEGIN
-        RILlogMessage(NULL,Log_0,"Will search for %s for IJD %.15lg and %.15lg",DS,ptr_IBIS_events->ijdStart,ptr_IBIS_events->ijdStop);
+        RILlogMessage(NULL,Log_0,"Will search for %s for IJD %.15lg and %.15lg",DS,ijdStart,ijdStop);
 
-        TRY( doICgetNewestDOL(DS,"",ptr_IBIS_events->ijdStart,dol_start,status) ,-1, "searching for %s",DS);
-        TRY( doICgetNewestDOL(DS,"",ptr_IBIS_events->ijdStop,dol_stop,status) ,-1,  "searching for %s",DS);
+        TRY( doICgetNewestDOL(DS,"",ijdStart,dol_start,status) ,-1, "searching for %s",DS);
+        TRY( doICgetNewestDOL(DS,"",ijdStop,dol_stop,status) ,-1,  "searching for %s",DS);
 
         if (strcmp(dol_start,dol_stop)!=0) {
             RILlogMessage(NULL,Log_0,"different DOL for start and stop: %s and %s",dol_start,dol_stop);
             return -1;
         }
 
-        RILlogMessage(NULL,Log_0,"Found %s as %s for IJD %.15lg and %.15lg",DS,dol_start,ptr_IBIS_events->ijdStart,ptr_IBIS_events->ijdStop);
+        RILlogMessage(NULL,Log_0,"Found %s as %s for IJD %.15lg and %.15lg",DS,dol_start,ijdStart,ijdStop);
         
         TRY( DAL3IBIS_populate_DS(dol_start, calibration_struct, DS, func_open_DS, func_read_DS, chatter, status), -1, "populating calibration from %s ", DS);
 
@@ -932,13 +932,17 @@ int DAL3IBIS_populate_DS(char *dol,  void * calibration_struct, char *DS, functy
     status=(*func_read_DS)(&ptr_dal,calibration_struct,chatter,status);
     return status;
 }
-    
-int DAL3IBIS_populate_DS_flexible(char *dol, IBIS_events_struct *ptr_IBIS_events,  void * calibration_struct, char *DS, functype_open_DS func_open_DS, functype_read_DS func_read_DS, int chatter, int status) {
+
+int DAL3IBIS_populate_DS_flexible_IJD(char *dol, double ijdStart, double ijdStop,  void * calibration_struct, char *DS, functype_open_DS func_open_DS, functype_read_DS func_read_DS, int chatter, int status) {
     if (strcmp(dol,"auto")==0) {
         RILlogMessage(NULL, Log_0, "will search for bintable %s in IC",DS);
-        return DAL3IBIS_populate_newest_DS(ptr_IBIS_events, calibration_struct, DS, func_open_DS, func_read_DS, chatter, status);
+        return DAL3IBIS_populate_newest_DS(ijdStart, ijdStop, calibration_struct, DS, func_open_DS, func_read_DS, chatter, status);
     }       
     return DAL3IBIS_populate_DS(dol,  calibration_struct, DS, func_open_DS, func_read_DS, chatter, status);
+}
+    
+int DAL3IBIS_populate_DS_flexible(char *dol, IBIS_events_struct *ptr_IBIS_events,  void * calibration_struct, char *DS, functype_open_DS func_open_DS, functype_read_DS func_read_DS, int chatter, int status) {
+    return DAL3IBIS_populate_DS_flexible_IJD(dol, ptr_IBIS_events->ijdStart, ptr_IBIS_events->ijdStop, calibration_struct, DS, func_open_DS, func_read_DS, chatter, status);
 }
 
     
@@ -1360,6 +1364,11 @@ int DAL3IBIS_read_MCEC(dal_element **ptr_ptr_dal_MCEC, ISGRI_energy_calibration_
     
 ////////////////////////
 
+// c++ does not like this funny overrriding
+int DAL3IBIS_populate_EFFC_flexible_IJD(char *dol, double ijdStart, double ijdStop,  void * calibration_struct, char *DS, int chatter, int status) {
+    return DAL3IBIS_populate_DS_flexible_IJD(dol, ijdStart, ijdStop,  calibration_struct, DS, DAL3IBIS_open_EFFC, DAL3IBIS_read_EFFC, chatter, status);
+}
+
 int DAL3IBIS_open_EFFC(char *dol_EFFC, dal_element **ptr_dal_EFFC, int chatter, int status) { 
 
     char keyVal[DAL_MAX_STRING];
@@ -1436,13 +1445,18 @@ int DAL3IBIS_read_EFFC(dal_element **ptr_ptr_dal_EFFC, ISGRI_efficiency_struct *
             }
 
             if (pixel_group[i]<0) {
-                RILlogMessage(NULL, Log_0, "groupping %i contains mapping of size %i",pixel_grouping[i],-pixel_group[i]);
+                RILlogMessage(NULL, Log_0, "groupping %i contains mapping of size %i, which?",pixel_grouping[i],-pixel_group[i]);
 
                 if (pixel_grouping[i] == PIXEL_GROUPING_LT) { // so far only LT mapping allowed
-                    if (-pixel_group[i] > N_LT) 
-                        return -1; // !!
-                    for (j=0;j<-pixel_group[i];j++) 
+                    //if (-pixel_group[i] > N_LT) 
+                    //    RILlogMessage(NULL, Log_0, "too many pixel groups");
+                    //    return -1; // !!
+                    for (j=0;j<-pixel_group[i] && j<N_LT;j++) {
                         ptr_ISGRI_efficiency->LT_mapping[j]=efficiency[i][j];
+                        RILlogMessage(NULL, Log_0, "mapping %i => %.5lg",j,efficiency[i][j]);
+                    }
+                } else {
+                    RILlogMessage(NULL, Warning_1, "undefined grouping: %i",pixel_grouping[i]);
                 }
                 //else ignore
             } else {
@@ -1460,7 +1474,7 @@ int DAL3IBIS_read_EFFC(dal_element **ptr_ptr_dal_EFFC, ISGRI_efficiency_struct *
 inline int get_LT_index(double LT, ISGRI_efficiency_struct *ptr_ISGRI_efficiency) {
     int i;
     for (i=0;i<N_LT;i++) {
-        if ( ptr_ISGRI_efficiency->LT_mapping[i] == LT ) {
+        if ( fabs(ptr_ISGRI_efficiency->LT_mapping[i] - LT) < ptr_ISGRI_efficiency->LT_approximation ) { 
             return i;
         }
     }
@@ -1473,8 +1487,10 @@ int DAL3IBIS_get_ISGRI_efficiency(double energy, int y, int z, ISGRI_efficiency_
     int mce;
 
     LT_index=ptr_ISGRI_efficiency->LT_map_indexed[y][z];
-    if (LT_index < 0)
-        return 0;
+    if (LT_index < 0) {
+        *ptr_efficiency=0;
+        return status;
+    }
     
     channel=C256_get_channel(energy);
 
