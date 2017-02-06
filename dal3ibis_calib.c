@@ -72,7 +72,16 @@
 /// this is not right!
 int doICgetNewestDOL(char * category,char * filter, double valid_time, char * DOL,int status) {
     char ic_group[DAL_MAX_STRING];
-    snprintf(ic_group,DAL_MAX_STRING,"%s/idx/ic/ic_master_file.fits[1]",getenv("CURRENT_IC")); // unsafe
+    char *current_ic;
+
+    if (current_ic=getenv("CURRENT_IC") == NULL) {
+        RILlogMessage(NULL, Error_1, "requested to search IC in DAL3IBIS, but environment is insufficient!");
+        RILlogMessage(NULL, Error_1, "likely, you need to provide the IC structure \"%s\" in the parameter",category);
+        return I_ISGR_ERR_BAD_INPUT;
+    }
+
+
+    snprintf(ic_group,DAL_MAX_STRING,"%s/idx/ic/ic_master_file.fits[1]",current_ic); 
     status=ICgetNewestDOL(ic_group,
             "OSA",
             category,filter,valid_time,DOL,status);
@@ -503,6 +512,8 @@ inline int DAL3IBIS_reconstruct_ISGRI_energy(
             + rt * ptr_ISGRI_energy_calibration->MCE_correction.rt_pha_cross_gain[mce];
 
     // LUT2 rapid here TODO
+    //
+    // by IJD, photon-scale
 
     /// compression to LUT2 index
     irt = round(rt); 
@@ -907,8 +918,8 @@ int DAL3IBIS_populate_newest_DS(double ijdStart, double ijdStop, void * calibrat
     TRY_BLOCK_BEGIN
         RILlogMessage(NULL,Log_0,"Will search for %s for IJD %.15lg and %.15lg",DS,ijdStart,ijdStop);
 
-        TRY( doICgetNewestDOL(DS,"",ijdStart,dol_start,status) ,-1, "searching for %s",DS);
-        TRY( doICgetNewestDOL(DS,"",ijdStop,dol_stop,status) ,-1,  "searching for %s",DS);
+        TRY( doICgetNewestDOL(DS,"",ijdStart,dol_start,status) ,I_ISGR_ERR_BAD_INPUT, "searching for %s",DS);
+        TRY( doICgetNewestDOL(DS,"",ijdStop,dol_stop,status) ,I_ISGR_ERR_BAD_INPUT,  "searching for %s",DS);
 
         if (strcmp(dol_start,dol_stop)!=0) {
             RILlogMessage(NULL,Log_0,"different DOL for start and stop: %s and %s",dol_start,dol_stop);

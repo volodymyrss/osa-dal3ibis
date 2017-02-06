@@ -167,13 +167,15 @@ typedef struct infoEvt_struct {
 } infoEvt_struct;
 
 typedef struct IBIS_events_struct {
-    long       numEvents;
+    long numEvents;
 
-    OBTime     obtStart;
-    OBTime     obtStop;
+    OBTime obtStart;
+    OBTime obtStop;
 
-    double     ijdStart;
-    double     ijdStop;
+    double ijdStart;
+    double ijdStop;
+
+    double *IJD;
 
     DAL3_Word *isgriPha;
     DAL3_Byte *riseTime;
