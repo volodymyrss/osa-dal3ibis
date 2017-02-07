@@ -4,6 +4,13 @@
 // this is all hard-coded because templates enforce 256 bins anyway
 // this is all hard-coded because background maps are provided in the same bins
 
+
+double C256_E_band_min[N_E_BAND];
+double C256_E_band_max[N_E_BAND];
+
+int C256_E_band_reverse[E_BAND_N_REVERSE];
+
+
 int C256_setup_E_bands(int chatter) {
     int bin;
     double DeltaE=0.;
