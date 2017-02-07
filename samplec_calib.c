@@ -83,7 +83,7 @@ int main(int arg, char *argv[]) {
 
       printf("OBJECT            : %s\n",argv[1]);
 
-      C256_setup_E_bands();
+      C256_setup_E_bands(chatter);
 
       OBT_num=0;
       type=DAL_LONG;
@@ -102,7 +102,7 @@ int main(int arg, char *argv[]) {
       TRY( DAL3IBIS_populate_newest_DS(IBIS_events.ijdStart,IBIS_events.ijdStop, &ISGRI_efficiency, DS_ISGR_EFFC,  &DAL3IBIS_open_EFFC, &DAL3IBIS_read_EFFC,chatter,status), status, "efficiency" );
 
       double x=0;
-      for (x=0;x<1000;x+=10) {
+      for (x=10;x<1000;x*=1.01) {
           double efficiency;
           DAL3IBIS_get_ISGRI_efficiency(x, 10, 10, &ISGRI_efficiency, &efficiency, chatter, status);
           printf("efficiency %.5lg %.5lg\n",x,efficiency);

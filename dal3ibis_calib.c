@@ -69,12 +69,11 @@
 #define I_COMP_SCA_ERR_ISGR_PHGO2_BAD      -142057
 
 
-/// this is not right!
 int doICgetNewestDOL(char * category,char * filter, double valid_time, char * DOL,int status) {
     char ic_group[DAL_MAX_STRING];
     char *current_ic;
 
-    if (current_ic=getenv("CURRENT_IC") == NULL) {
+    if (!(current_ic=getenv("CURRENT_IC"))) {
         RILlogMessage(NULL, Error_1, "requested to search IC in DAL3IBIS, but environment is insufficient!");
         RILlogMessage(NULL, Error_1, "likely, you need to provide the IC structure \"%s\" in the parameter",category);
         return I_ISGR_ERR_BAD_INPUT;
@@ -1501,6 +1500,10 @@ int DAL3IBIS_get_ISGRI_efficiency(double energy, int y, int z, ISGRI_efficiency_
     if (LT_index < 0) {
         *ptr_efficiency=0;
         return status;
+    }
+
+    if (chatter>9) {
+        RILlogMessage(NULL, Log_1, "Y: %i Z: %i LT: %.5lg LT indexL %i", y,z,ptr_ISGRI_efficiency->LT_map[y][z],LT_index);
     }
     
     channel=C256_get_channel(energy);
