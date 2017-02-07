@@ -19,6 +19,8 @@
 
 #include "dal3ibis.h"
 #include "dal3ibis_calib.h"
+#include "dal3ibis_calib_aux.h"
+#include "dal3ibis_calib_ebands.h"
 #include "dal3hk.h"
 #include "dal3aux.h"
 #include "ril.h"
@@ -1497,23 +1499,37 @@ int DAL3IBIS_get_ISGRI_efficiency(double energy, int y, int z, ISGRI_efficiency_
     int LT_index;
     int mce;
 
+    double efficiency_1;
+    double efficiency_2;
+
     LT_index=ptr_ISGRI_efficiency->LT_map_indexed[y][z];
     if (LT_index < 0) {
         *ptr_efficiency=0;
         return status;
     }
 
-    if (chatter>9) {
-        RILlogMessage(NULL, Log_1, "Y: %i Z: %i LT: %.5lg LT index %i", y,z,ptr_ISGRI_efficiency->LT_map[y][z],LT_index);
-    }
     
     channel=C256_get_channel(energy);
-
+    
     mce=yz_to_mce(y,z);
         
-    *ptr_efficiency=ptr_ISGRI_efficiency->MCE_efficiency[mce][channel];
+    efficiency_1=ptr_ISGRI_efficiency->MCE_efficiency[mce][channel];
+    efficiency_1*=ptr_ISGRI_efficiency->LT_efficiency[LT_index][channel];
+    
+    if (channel>=N_E_BAND-1) {
+        *ptr_efficiency=efficiency_1;
+        return status;
+    }
+    
+    efficiency_2=ptr_ISGRI_efficiency->MCE_efficiency[mce][channel+1];
+    efficiency_2*=ptr_ISGRI_efficiency->LT_efficiency[LT_index][channel+1];
 
-    *ptr_efficiency*=ptr_ISGRI_efficiency->LT_efficiency[LT_index][channel];
+    if (chatter>9) {
+        RILlogMessage(NULL, Log_1, "Y: %i Z: %i LT: %.5lg LT index %i",y,z,ptr_ISGRI_efficiency->LT_map[y][z],LT_index);
+        RILlogMessage(NULL, Log_1, "Energy %.5lg channel %i %.5lg - %.5lg eff 1,2 %.5lg %.5lg", energy,channel,C256_get_E_min(channel),C256_get_E_min(channel+1),efficiency_1,efficiency_2);
+    }
+
+    *ptr_efficiency=( energy - C256_get_E_min(channel) ) / ( C256_get_E_min(channel+1) - C256_get_E_min(channel) ) * ( efficiency_2 - efficiency_1 ) + efficiency_1;
 
     return status;
 }
@@ -1576,13 +1592,12 @@ int DAL3IBIS_read_REV_context_maps(dal_element   *REVcontext,       // DOL to th
         for(z=0;z<ISGRI_SIZE;z++) {	    
             ptr_ISGRI_efficiency->LT_map[y][z]=LowThreshMap[y][z];
             ptr_ISGRI_efficiency->LT_map_indexed[y][z]=get_LT_index(ptr_ISGRI_efficiency->LT_map[y][z], ptr_ISGRI_efficiency);
-            if (chatter>-9)
+            if (chatter>9)
                 RILstatus = RILlogMessage(NULL, Log_1,"y: %i z: %i LT %.5lg LT index %i",y,z,LowThreshMap[y][z],ptr_ISGRI_efficiency->LT_map_indexed[y][z]);
 
             if (ptr_ISGRI_efficiency->LT_map_indexed[y][z]>=0) {
                 LT_count[ptr_ISGRI_efficiency->LT_map_indexed[y][z]]++;
                 N_good_total++;
-                RILstatus = RILlogMessage(NULL, Log_1,"good");
             }
         }
     }

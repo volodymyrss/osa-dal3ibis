@@ -35,7 +35,7 @@ inline double C256_get_E_min(int ch) {
 
 inline double C256_get_E_max(int ch) {
     if ( ch<0 || ch>=N_E_BAND ) return 0.; 
-    return C256_E_band_max[ch];
+    return (double)C256_E_band_max[ch];
 }
 
 inline int C256_get_channel(double energy) {
