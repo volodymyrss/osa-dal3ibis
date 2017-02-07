@@ -1483,11 +1483,12 @@ int DAL3IBIS_read_EFFC(dal_element **ptr_ptr_dal_EFFC, ISGRI_efficiency_struct *
 
 inline int get_LT_index(double LT, ISGRI_efficiency_struct *ptr_ISGRI_efficiency) {
     int i;
-    for (i=0;i<N_LT;i++) {
-        if ( fabs(ptr_ISGRI_efficiency->LT_mapping[i] - LT) < ptr_ISGRI_efficiency->LT_approximation ) { 
-            return i;
+    if (LT>0) 
+        for (i=0;i<N_LT;i++) {
+            if ( fabs(ptr_ISGRI_efficiency->LT_mapping[i] - LT) < ptr_ISGRI_efficiency->LT_approximation ) { 
+                return i;
+            }
         }
-    }
     return -1;
 }
 
@@ -1503,7 +1504,7 @@ int DAL3IBIS_get_ISGRI_efficiency(double energy, int y, int z, ISGRI_efficiency_
     }
 
     if (chatter>9) {
-        RILlogMessage(NULL, Log_1, "Y: %i Z: %i LT: %.5lg LT indexL %i", y,z,ptr_ISGRI_efficiency->LT_map[y][z],LT_index);
+        RILlogMessage(NULL, Log_1, "Y: %i Z: %i LT: %.5lg LT index %i", y,z,ptr_ISGRI_efficiency->LT_map[y][z],LT_index);
     }
     
     channel=C256_get_channel(energy);
@@ -1567,10 +1568,36 @@ int DAL3IBIS_read_REV_context_maps(dal_element   *REVcontext,       // DOL to th
     }
         
     /// this is not too good at all
+
+    int LT_count[N_LT] = {0};
+    int N_good_total=0;
+
     for(y=0;y<ISGRI_SIZE;y++) {
         for(z=0;z<ISGRI_SIZE;z++) {	    
             ptr_ISGRI_efficiency->LT_map[y][z]=LowThreshMap[y][z];
             ptr_ISGRI_efficiency->LT_map_indexed[y][z]=get_LT_index(ptr_ISGRI_efficiency->LT_map[y][z], ptr_ISGRI_efficiency);
+            if (chatter>-9)
+                RILstatus = RILlogMessage(NULL, Log_1,"y: %i z: %i LT %.5lg LT index %i",y,z,LowThreshMap[y][z],ptr_ISGRI_efficiency->LT_map_indexed[y][z]);
+
+            if (ptr_ISGRI_efficiency->LT_map_indexed[y][z]>=0) {
+                LT_count[ptr_ISGRI_efficiency->LT_map_indexed[y][z]]++;
+                N_good_total++;
+                RILstatus = RILlogMessage(NULL, Log_1,"good");
+            }
+        }
+    }
+
+    RILstatus = RILlogMessage(NULL, Log_1,"%i / %.5lg%% of pixels have usable LT",N_good_total,((float)N_good_total)/ISGRI_SIZE/ISGRI_SIZE*100.);
+    int i;
+    if (chatter>1) {
+        for (i=0;i<N_LT;i++) {
+            RILstatus = RILlogMessage(NULL, Log_1,"index %3i LT %8.4lg N %5i %8.4lg%% or %8.4lg%% of usable",
+                        i,
+                        ptr_ISGRI_efficiency->LT_mapping[i],
+                        LT_count[i],
+                        ((float)(LT_count[i]))/ISGRI_SIZE/ISGRI_SIZE*100.,
+                        ((float)(LT_count[i]))/N_good_total*100.
+                        );
         }
     }
 

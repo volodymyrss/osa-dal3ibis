@@ -95,11 +95,27 @@ int main(int arg, char *argv[]) {
       ISGRI_energy_calibration_struct ISGRI_energy_calibration;
       PICsIT_energy_calibration_struct PICsIT_energy_calibration;
       ISGRI_efficiency_struct ISGRI_efficiency;
+      ISGRI_efficiency.LT_approximation=0.001;
 
       TRY( DAL3IBIS_read_IBIS_events(DAL_DS,COMPTON_SGLE,&IBIS_events,1,chatter,status), 0, "reading Compton events"); 
       //TRY( DAL3IBIS_read_IBIS_events(DAL_DS,ISGRI_EVTS,IBIS_events.ijdStart,IBIS_events.ijdStop,1,chatter,status), 0, "reading ISGRI events"); 
 
       TRY( DAL3IBIS_populate_newest_DS(IBIS_events.ijdStart,IBIS_events.ijdStop, &ISGRI_efficiency, DS_ISGR_EFFC,  &DAL3IBIS_open_EFFC, &DAL3IBIS_read_EFFC,chatter,status), status, "efficiency" );
+
+      dal_double **LowThreshMap= NULL;
+      if((LowThreshMap=(dal_double **)calloc(ISGRI_SIZE, sizeof(dal_double *)))==NULL)
+        FAIL(status, "Error in allocating memory for LowThreshold image  map.");
+      for(i=0; i<ISGRI_SIZE; i++)
+        if((LowThreshMap[i]=(dal_double *)calloc(ISGRI_SIZE, sizeof(dal_double )))==NULL)
+          FAIL(status,"Error in allocating memory for LowThreshold image map : i = %d.", i);
+      dal_int **ONpixelsREVmap= NULL;
+      if((ONpixelsREVmap= (dal_int**)calloc(ISGRI_SIZE, sizeof(dal_int*)))==NULL) FAIL(status,"");
+      for(i=0; i<ISGRI_SIZE; i++)
+        if((ONpixelsREVmap[i]= (dal_int*)calloc(ISGRI_SIZE, sizeof(dal_int)))==NULL) FAIL(status,"")
+
+      dal_element *DAL_context;
+      TRY(DAL_GC_objectOpen("/isdc/arc/rev_3//scw/0239/rev.001/idx/isgri_context_index.fits",&DAL_context,status,"input object"),status,"opening input context");
+      TRY( DAL3IBIS_read_REV_context_maps(DAL_context, 239, IBIS_events.obtStop, LowThreshMap, ONpixelsREVmap, &ISGRI_efficiency, 10), status, "context");
 
       double x=0;
       for (x=10;x<1000;x*=1.01) {
