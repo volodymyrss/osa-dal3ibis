@@ -650,15 +650,8 @@ int DAL3IBIS_reconstruct_ISGRI_energies(
     
     RILlogMessage(NULL, Log_0, "reconstructing ISGRI energies");
 
-    int mx=0;
 
     for (i=0; i<ptr_IBIS_events->numEvents; i++) {
-        if (ptr_IBIS_events->isgriPha[i]>mx) {
-            printf("any: %i %i\n",
-                    mx=(int)ptr_IBIS_events->isgriPha[i],
-                    (int)ptr_IBIS_events->riseTime[i]
-                );
-        }
 
         DAL3IBIS_reconstruct_ISGRI_energy(
                 ptr_IBIS_events->isgriPha[i],
