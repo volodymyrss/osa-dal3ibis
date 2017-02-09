@@ -194,6 +194,9 @@ typedef struct IBIS_events_struct {
     infoEvt_struct infoEvt;
 
     IBIS_type event_kind;
+    int isgriPha_scale;
+    int picsitPha_scale;
+
 } IBIS_events_struct;
 
 

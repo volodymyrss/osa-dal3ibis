@@ -148,10 +148,11 @@ int DAL3IBIS_correct_LUT1_for_temperature_bias(
             pixelNo = yz_to_pixelNo(i_y,i_z);
             mce     = yz_to_mce(i_y,i_z);
 
-            ptr_ISGRI_energy_calibration->LUT1.pha_gain[i_y][i_z]*pow(meanTemp[mce],-1.11)*pow(meanBias[mce],-0.0832);
-            ptr_ISGRI_energy_calibration->LUT1.pha_offset[i_y][i_z]*pow(meanTemp[mce],slopeMCE[mce])*pow(meanBias[mce],0.0288);
-            ptr_ISGRI_energy_calibration->LUT1.rt_gain[i_y][i_z]*pow(meanTemp[mce],0.518)*pow(meanBias[mce],0.583);
-            ptr_ISGRI_energy_calibration->LUT1.rt_offset[i_y][i_z]*pow(meanTemp[mce],0.625)*pow(meanBias[mce],0.530);
+            ptr_ISGRI_energy_calibration->LUT1.pha_gain[i_y][i_z]   *=  pow(meanTemp[mce],-1.11)*pow(meanBias[mce],-0.0832);
+            ptr_ISGRI_energy_calibration->LUT1.pha_offset[i_y][i_z] *=  pow(meanTemp[mce],slopeMCE[mce])*pow(meanBias[mce],0.0288);
+            ptr_ISGRI_energy_calibration->LUT1.rt_gain[i_y][i_z]    *=  pow(meanTemp[mce],0.518)*pow(meanBias[mce],0.583);
+            ptr_ISGRI_energy_calibration->LUT1.rt_offset[i_y][i_z]  *=  pow(meanTemp[mce],0.625)*pow(meanBias[mce],0.530);
+            
         }
 
     return status;
@@ -493,16 +494,34 @@ inline int DAL3IBIS_reconstruct_ISGRI_energy(
          *ptr_isgri_pi=irt;
          return -1;
     };
-    
-    pha = pha_scale * ( isgriPha+DAL3GENrandomDoubleX1() );
-    rt = riseTime + DAL3GENrandomDoubleX1();
 
+    int track=0;
+    if (fabs(riseTime-40)<5 && fabs(isgriPha*pha_scale-1000)<1) {
+        printf("best photon %i %i\n",riseTime,isgriPha);
+        track=1;
+    }
+    
+    pha = pha_scale * ( isgriPha+DAL3GENrandomDoubleX1()*0 );
+    rt = riseTime + DAL3GENrandomDoubleX1()*0;
+        
     // 256 channels for LUT2 calibration scaled 
     rt = 2.*rt/2.4+5.0;  
+    
+    if (track)
+        printf("scaled pha, rt %.5lg %.5lg\n",pha,rt);
+
+    if (track)
+        printf("pixel %i %i LUT1 RT G %.5lg  O %.5lg PHA G %.5lg O %.5lg\n",(int)isgriY,(int)isgriZ,
+                ptr_ISGRI_energy_calibration->LUT1.rt_gain[isgriY][isgriZ],
+                ptr_ISGRI_energy_calibration->LUT1.rt_offset[isgriY][isgriZ],
+                ptr_ISGRI_energy_calibration->LUT1.pha_gain[isgriY][isgriZ],
+                ptr_ISGRI_energy_calibration->LUT1.pha_offset[isgriY][isgriZ]
+                );
+
 
     rt = rt * ptr_ISGRI_energy_calibration->LUT1.rt_gain[isgriY][isgriZ] + ptr_ISGRI_energy_calibration->LUT1.rt_offset[isgriY][isgriZ];
     pha = pha * ptr_ISGRI_energy_calibration->LUT1.pha_gain[isgriY][isgriZ] + ptr_ISGRI_energy_calibration->LUT1.pha_offset[isgriY][isgriZ];
-
+    
     // MCE correction
     
     mce     = yz_to_mce(isgriY,isgriZ);
@@ -511,6 +530,9 @@ inline int DAL3IBIS_reconstruct_ISGRI_energy(
     pha = pha * ptr_ISGRI_energy_calibration->MCE_correction.pha_gain[mce] 
             + ptr_ISGRI_energy_calibration->MCE_correction.pha_offset[mce] 
             + rt * ptr_ISGRI_energy_calibration->MCE_correction.rt_pha_cross_gain[mce];
+    
+    if (track)
+        printf("post LUT1 pha, rt %.5lg %.5lg\n",pha,rt);
 
     // LUT2 rapid here TODO
     //
@@ -535,6 +557,8 @@ inline int DAL3IBIS_reconstruct_ISGRI_energy(
     
     *ptr_isgri_energy+=gradient*(pha-(double)ipha);
     
+    if (track)
+        printf("energy  %.5lg\n",*ptr_isgri_energy);
 
     // invalid LUT2 values
     if (*ptr_isgri_energy < 0) {
@@ -606,7 +630,7 @@ int DAL3IBIS_reconstruct_Compton_energies(
                 ptr_ISGRI_energy_calibration,
 
                 &ptr_IBIS_events->infoEvt,
-                8,
+                ptr_IBIS_events->isgriPha_scale,
                 status
                 );
         
@@ -620,7 +644,7 @@ int DAL3IBIS_reconstruct_Compton_energies(
                 ptr_PICsIT_energy_calibration,
 
                 &ptr_IBIS_events->infoEvt,
-                4,
+                ptr_IBIS_events->picsitPha_scale,
                 status
                 );
     }
@@ -650,7 +674,15 @@ int DAL3IBIS_reconstruct_ISGRI_energies(
     
     RILlogMessage(NULL, Log_0, "reconstructing ISGRI energies");
 
+    int mx=0;
+
     for (i=0; i<ptr_IBIS_events->numEvents; i++) {
+        if (ptr_IBIS_events->isgriPha[i]>mx) {
+            printf("any: %i %i\n",
+                    mx=(int)ptr_IBIS_events->isgriPha[i],
+                    (int)ptr_IBIS_events->riseTime[i]
+                );
+        }
 
         DAL3IBIS_reconstruct_ISGRI_energy(
                 ptr_IBIS_events->isgriPha[i],
@@ -766,6 +798,14 @@ int DAL3IBIS_read_IBIS_events(dal_element *workGRP,
     ptr_IBIS_events->infoEvt.pha_too_high=0;
     ptr_IBIS_events->infoEvt.negative_energy=0;
     ptr_IBIS_events->event_kind=event_kind;
+    if (event_kind == COMPTON_SGLE || event_kind == COMPTON_MULE ) {
+        ptr_IBIS_events->isgriPha_scale=8;
+        ptr_IBIS_events->picsitPha_scale=4;
+    } else {
+        ptr_IBIS_events->isgriPha_scale=1;
+        ptr_IBIS_events->picsitPha_scale=0;
+    }
+
 
   short  selected=0;
   long   buffSize;

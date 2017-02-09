@@ -97,8 +97,9 @@ int main(int arg, char *argv[]) {
       ISGRI_efficiency_struct ISGRI_efficiency;
       ISGRI_efficiency.LT_approximation=0.001;
 
-      TRY( DAL3IBIS_read_IBIS_events(DAL_DS,COMPTON_SGLE,&IBIS_events,1,chatter,status), 0, "reading Compton events"); 
-      //TRY( DAL3IBIS_read_IBIS_events(DAL_DS,ISGRI_EVTS,IBIS_events.ijdStart,IBIS_events.ijdStop,1,chatter,status), 0, "reading ISGRI events"); 
+     // TRY( DAL3IBIS_read_IBIS_events(DAL_DS,COMPTON_SGLE,&IBIS_events,1,chatter,status), 0, "reading Compton events"); 
+      TRY( DAL3IBIS_read_IBIS_events(DAL_DS,ISGRI_EVTS,&IBIS_events,1,chatter,status), 0, "reading events"); 
+     // TRY( DAL3IBIS_read_IBIS_events(DAL_DS,ISGRI_EVTS,IBIS_events.ijdStart,IBIS_events.ijdStop,1,chatter,status), 0, "reading ISGRI events"); 
 
       TRY( DAL3IBIS_populate_newest_DS(IBIS_events.ijdStart,IBIS_events.ijdStop, &ISGRI_efficiency, DS_ISGR_EFFC,  &DAL3IBIS_open_EFFC, &DAL3IBIS_read_EFFC,chatter,status), status, "efficiency" );
 
@@ -113,8 +114,8 @@ int main(int arg, char *argv[]) {
       for(i=0; i<ISGRI_SIZE; i++)
         if((ONpixelsREVmap[i]= (dal_int*)calloc(ISGRI_SIZE, sizeof(dal_int)))==NULL) FAIL(status,"")
 
-      dal_element *DAL_context;
-      TRY(DAL_GC_objectOpen("/isdc/arc/rev_3//scw/0239/rev.001/idx/isgri_context_index.fits",&DAL_context,status,"input object"),status,"opening input context"); //hc!!
+      /*dal_element *DAL_context;
+      TRY(DAL_GC_objectOpen("/scw/0239/rev.001/idx/isgri_context_index.fits",&DAL_context,status,"input object"),status,"opening input context"); //hc!!
       TRY( DAL3IBIS_read_REV_context_maps(DAL_context, 239, IBIS_events.obtStop, LowThreshMap, ONpixelsREVmap, &ISGRI_efficiency, 9), status, "context"); // hc!!
 
       double x=0;
@@ -122,7 +123,7 @@ int main(int arg, char *argv[]) {
           double efficiency;
           DAL3IBIS_get_ISGRI_efficiency(x, 10, 10, &ISGRI_efficiency, &efficiency, chatter, status);
           printf("efficiency %.5lg %.5lg\n",x,efficiency);
-      }                 
+      } */                
 
       TRY( DAL3IBIS_init_ISGRI_energy_calibration(&ISGRI_energy_calibration,status), status, "initializing ISGRI energy calibration");
       TRY( DAL3IBIS_init_PICsIT_energy_calibration(&PICsIT_energy_calibration,status), status, "initializing PICsIT energy calibration");
@@ -137,7 +138,7 @@ int main(int arg, char *argv[]) {
       TRY( DAL3IBIS_populate_newest_DS(IBIS_events.ijdStart,IBIS_events.ijdStop, &PICsIT_energy_calibration, DS_PICS_GO, &DAL3IBIS_open_PICsIT_GO, &DAL3IBIS_read_PICsIT_GO, chatter,status), status, "PICsIT GO" );
       
       TRY( DAL3IBIS_reconstruct_ISGRI_energies(&ISGRI_energy_calibration,&IBIS_events,chatter,status), status, "reconstructing energies");
-      TRY( DAL3IBIS_reconstruct_Compton_energies(&ISGRI_energy_calibration,&PICsIT_energy_calibration,&IBIS_events,chatter,status), status, "reconstructing energies");
+   //   TRY( DAL3IBIS_reconstruct_Compton_energies(&ISGRI_energy_calibration,&PICsIT_energy_calibration,&IBIS_events,chatter,status), status, "reconstructing energies");
       
 
   TRY_BLOCK_END
