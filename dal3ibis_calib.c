@@ -509,9 +509,10 @@ inline int DAL3IBIS_reconstruct_ISGRI_energy(
     mce     = yz_to_mce(isgriY,isgriZ);
 
     rt = rt * ptr_ISGRI_energy_calibration->MCE_correction.rt_gain[mce] + ptr_ISGRI_energy_calibration->MCE_correction.rt_offset[mce];
-    pha = pha * ptr_ISGRI_energy_calibration->MCE_correction.pha_gain[mce] 
-            + ptr_ISGRI_energy_calibration->MCE_correction.pha_offset[mce] 
-            + rt * ptr_ISGRI_energy_calibration->MCE_correction.rt_pha_cross_gain[mce];
+    pha =   ptr_ISGRI_energy_calibration->MCE_correction.pha_offset[mce] 
+          + pha * ptr_ISGRI_energy_calibration->MCE_correction.pha_gain[mce] 
+          + 2*15./pha * ptr_ISGRI_energy_calibration->MCE_correction.pha_gain2[mce] 
+          + rt * ptr_ISGRI_energy_calibration->MCE_correction.rt_pha_cross_gain[mce];
 
     // LUT2 rapid here TODO
     //
@@ -1346,17 +1347,22 @@ int DAL3IBIS_read_MCEC(dal_element **ptr_ptr_dal_MCEC, ISGRI_energy_calibration_
                             (void *)(ptr_ISGRI_energy_calibration->MCE_correction.rt_gain), status);
 
     int mce;
+    char logstr_pha_gain2[DAL_BIG_STRING];
     char logstr_pha_gain[DAL_BIG_STRING];
     char logstr_pha_offset[DAL_BIG_STRING];
     char logstr_rt_gain[DAL_BIG_STRING];
     char logstr_rt_offset[DAL_BIG_STRING];
     
-    sprintf(logstr_pha_gain,  "MCE correction PHA gain  ");
-    sprintf(logstr_pha_offset,"               PHA offset");
-    sprintf(logstr_rt_gain,   "               RT  gain  ");
-    sprintf(logstr_rt_offset, "               RT  offset");
+    sprintf(logstr_pha_gain2,  "MCE correction PHA gain-2 ");
+    sprintf(logstr_pha_gain,  "                PHA gain   ");
+    sprintf(logstr_pha_offset,"                PHA offset ");
+    sprintf(logstr_rt_gain,   "                RT  gain   ");
+    sprintf(logstr_rt_offset, "                RT  offset ");
 
     for (mce=0;mce<8;mce++) {
+        sprintf(strchr(logstr_pha_gain2, '\0'),
+                " %5.3lf",ptr_ISGRI_energy_calibration->MCE_correction.pha_gain2[mce]);
+
         sprintf(strchr(logstr_pha_gain, '\0'),
                 " %5.3lf",ptr_ISGRI_energy_calibration->MCE_correction.pha_gain[mce]);
 
@@ -1373,6 +1379,7 @@ int DAL3IBIS_read_MCEC(dal_element **ptr_ptr_dal_MCEC, ISGRI_energy_calibration_
 
 
     if (chatter>3) {
+        RILlogMessage(NULL,Log_0,"%s",logstr_pha_gain2);
         RILlogMessage(NULL,Log_0,"%s",logstr_pha_gain);
         RILlogMessage(NULL,Log_0,"%s",logstr_pha_offset);
         RILlogMessage(NULL,Log_0,"%s",logstr_rt_gain);
