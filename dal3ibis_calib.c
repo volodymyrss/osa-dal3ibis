@@ -1540,7 +1540,7 @@ int DAL3IBIS_get_ISGRI_efficiency(double energy, int y, int z, ISGRI_efficiency_
     efficiency_2=ptr_ISGRI_efficiency->MCE_efficiency[mce][channel+1];
     efficiency_2*=ptr_ISGRI_efficiency->LT_efficiency[LT_index][channel+1];
 
-    if (chatter>9) {
+    if (chatter>10) {
         RILlogMessage(NULL, Log_1, "Y: %i Z: %i LT: %.5lg LT index %i",y,z,ptr_ISGRI_efficiency->LT_map[y][z],LT_index);
         RILlogMessage(NULL, Log_1, "Energy %.5lg channel %i %.5lg - %.5lg eff 1,2 %.5lg %.5lg", energy,channel,C256_get_E_min(channel),C256_get_E_min(channel+1),efficiency_1,efficiency_2);
     }
