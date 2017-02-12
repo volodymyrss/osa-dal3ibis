@@ -178,6 +178,21 @@ CLEAN_TARGETS		+= ${C_EXEC_3_NAME}
 ALL_TARGETS		+= ${C_EXEC_3_NAME}
 # ======================== END OF C EXECUTABLE TARGET  ===================
 
+# ========================= C EXECUTABLE TARGET  =========================
+# PLEASE CUT&PASTE INTO makeisdc1.in FROM HERE UP TO END OF TARGET DEFN
+#
+C_EXEC_4_NAME		= icaccess_test 
+C_EXEC_4_SOURCES	= icaccess_test.c
+C_EXEC_4_OBJECTS	= icaccess_test.o
+C_EXEC_4_LIBRARIES	= -ldal3ibis -lISDCroot -ldal3hk -ldal3aux -ldal3gen -lcommon -lpil -lril -ldal -lcfitsio ${LAST_LIBS}
+
+${C_EXEC_4_NAME}:	${C_EXEC_4_OBJECTS} ${LIB_FULL_NAME}
+			${CXX}  ${ALL_C_CFLAGS} -o ${C_EXEC_4_NAME} ${C_EXEC_4_OBJECTS} ${ALL_C_LDFLAGS} ${C_EXEC_4_LIBRARIES} -g
+
+CLEAN_TARGETS		+= ${C_EXEC_4_NAME}
+ALL_TARGETS		+= ${C_EXEC_4_NAME}
+# ======================== END OF C EXECUTABLE TARGET  ===================
+
 # ========================= F90 EXECUTABLE TARGET  =========================
 # PLEASE CUT&PASTE INTO makeisdc1.in FROM HERE UP TO END OF TARGET DEFN
 #
