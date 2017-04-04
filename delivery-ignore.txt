@@ -3,3 +3,4 @@ depends_on.txt
 component.yaml
 README.md
 unit_test_ddosa
+git_version.h
