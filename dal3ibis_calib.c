@@ -4,17 +4,17 @@
 /*                                                                           */
 /*                           DAL3  IBIS  LIBRARY                             */
 /*                                                                           */
-/*                              ICA ENERGY                                  */
+/*                              CALIBRATION                                  */
 /*                                                                           */
-/*  Authors: */
-/*  Date:    */
-/*  Version: */
+/*  Authors: Volodymyr Savchenko                                             */
+/*  Date:    17/04/15                                                        */
+/*  Version: 1.0                                                             */
 /*                                                                           */
 /*  Revision history                                                         */
 /*                                                                           */
 /*                                                                           */
 /*  ==================                                                       */
-/*  1.                                                                         */
+/*  1. created                                                                      */
 /*****************************************************************************/
 
 #include "dal3ibis.h"
@@ -25,9 +25,6 @@
 #include "dal3aux.h"
 #include "ril.h"
             
-/****************************************************************************
-                                                                          
-***************************************************************************/
 
 #define KEY_DEF_BIAS      -120.0 
 #define KEY_DEF_TEMP        -8.0    /* default when HK1 missing */
@@ -44,7 +41,6 @@
 #define DS_PICS_GO        "PICS-ENER-MOD"
 
 
-//#define KEY_COL_OUT  "ISGRI_PI"
 #define KEY_MCE_BIAS "I0E_MCDTE_MBIAS"
 #define KEY_DEF_BIAS      -120.0    /* default when HK1 missing */
 #define KEY_MAX_BIAS       -60.0    /*  155 to disregard RAW 0  */
@@ -514,9 +510,7 @@ inline int DAL3IBIS_reconstruct_ISGRI_energy(
           + 2*15./pha * ptr_ISGRI_energy_calibration->MCE_correction.pha_gain2[mce] 
           + rt * ptr_ISGRI_energy_calibration->MCE_correction.rt_pha_cross_gain[mce];
 
-    // LUT2 rapid here TODO
-    //
-    // by IJD, photon-scale
+    // LUT2 rapid will be implemented here
 
     /// compression to LUT2 index
     irt = round(rt); 

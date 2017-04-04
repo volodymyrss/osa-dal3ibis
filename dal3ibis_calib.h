@@ -150,10 +150,6 @@ typedef struct ISGRI_efficiency_struct {
     double LT_map[ISGRI_N_PIXEL_Y][ISGRI_N_PIXEL_Z];
     int LT_map_indexed[ISGRI_N_PIXEL_Y][ISGRI_N_PIXEL_Z];
 
-    //double pixel_efficiency[ISGRI_N_PIXEL_Y][ISGRI_N_PIXEL_Z]; // grey, also used to kill pixels
-    
-
-
 } ISGRI_efficiency_struct;
 
 typedef struct infoEvt_struct {
@@ -199,7 +195,6 @@ typedef struct IBIS_events_struct {
 
 } IBIS_events_struct;
 
-
 // auxiliary calls to read HK
 
 int DAL3IBIS_MceIsgriHkCal(dal_element *workGRP,
@@ -217,15 +212,12 @@ int explain_error(int status,  char *error);
 typedef int (*functype_open_DS)(char *, dal_element **, int , int);
 typedef int (*functype_read_DS)(dal_element **, void *, int , int);
 
-
 int DAL3IBIS_open_LUT1(char *dol_LUT1, dal_element **ptr_ptr_dal_LUT1, int chatter,int status);
 int DAL3IBIS_open_LUT2(char *dol_LUT2, dal_element **ptr_dal_LUT2, int chatter, int status);
-//int DAL3IBIS_open_LUT2_image(char *dol_LUT2, dal_element **ptr_dal_LUT2, int chatter, int status;
 int DAL3IBIS_open_L2RE(char *dol_L2RE, dal_element **ptr_dal_L2RE, int chatter, int status);
 int DAL3IBIS_open_MCEC(char *dol_MCEC, dal_element **ptr_dal_MCEC, int chatter, int status);
 int DAL3IBIS_open_EFFC(char *dol_EFFC, dal_element **ptr_dal_EFFC, int chatter, int status);
 int DAL3IBIS_read_LUT1(dal_element **ptr_dal_LUT1, ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration, int chatter, int status);
-//int DAL3IBIS_read_LUT2_image(dal_element **ptr_ptr_dal_LUT2, ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration, int chatter, int status);
 int DAL3IBIS_read_LUT2(dal_element **ptr_ptr_dal_LUT2, ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration, int chatter, int status);
 int DAL3IBIS_read_L2RE(dal_element **ptr_ptr_dal_L2RE, ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration, int chatter, int status);
 int DAL3IBIS_read_MCEC(dal_element **ptr_ptr_dal_MCEC, ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration, int chatter, int status);
