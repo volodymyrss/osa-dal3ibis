@@ -6,32 +6,9 @@
 /*                                                                           */
 /*                            C SAMPLE PROGRAM                               */
 /*                                                                           */
-/*  Authors: Stéphane Paltani, Laurent Lerusse                               */
-/*  Date:    23 December 2000                                                */
-/*  Version: 3.3.0                                                           */
-/*                                                                           */
-/*  Revision history                                                         */
-/*                                                                           */
-/*  11.05.2000 V 3.0.0                                                       */
-/*  ==================                                                       */
-/*  6. Removed DAL3 subsets from the sample programs                         */
-/*                                                                           */
-/*  21.02.2000 V 2.2.5                                                       */
-/*  ==================                                                       */
-/* 1. The library uses now Makefile-2.0.1                                    */
-/* 2. The library requires now DAL3GEN 2.4                                   */
-/* 5. Implements the new ISDCLevel concept from TN020                        */
-/*                                                                           */
-/*  22.08.1999 V 2.1.0                                                       */
-/*  ==================                                                       */
-/* 1. The library now uses DAL 1.3 and Makefile-1.3.1                        */
-/* 9. Changed "samplec" and "samplef90" so that the user can really "play"   */
-/*    with it.                                                               */
-/*                                                                           */
-/*  18.06.1999 V 2.0.1                                                       */
-/*  27.05.1999 V 2.0.0                                                       */
-/*                                                                           */
-/*  10.03.1999 V 1.0.0                                                       */
+/*  Authors: Volodymyr Savchenko                                             */
+/*  Date:    23 January 2017                                                 */
+/*  Version: 3.3.1                                                           */
 /*                                                                           */
 /*****************************************************************************/
 
@@ -47,17 +24,6 @@
 /* DAL3IBIS optional library                                                 */
 #include <dal3ibis.h>
 #include <dal3ibis_calib.h>
-
-
-
-/*int doICgetNewestDOL(char * category,char * filter, double valid_time, char * DOL,int status) {
-    char ic_group[255];
-    snprintf(ic_group,255,"%s/idx/ic/ic_master_file.fits[1]",getenv("CURRENT_IC"));
-    status=ICgetNewestDOL(ic_group,
-            "OSA",
-            category,filter,valid_time,DOL,status);
-    return status;
-}*/
 
 
 int main(int arg, char *argv[]) {
@@ -97,9 +63,7 @@ int main(int arg, char *argv[]) {
       ISGRI_efficiency_struct ISGRI_efficiency;
       ISGRI_efficiency.LT_approximation=0.001;
 
-     // TRY( DAL3IBIS_read_IBIS_events(DAL_DS,COMPTON_SGLE,&IBIS_events,1,chatter,status), 0, "reading Compton events"); 
       TRY( DAL3IBIS_read_IBIS_events(DAL_DS,ISGRI_EVTS,&IBIS_events,1,chatter,status), 0, "reading events"); 
-     // TRY( DAL3IBIS_read_IBIS_events(DAL_DS,ISGRI_EVTS,IBIS_events.ijdStart,IBIS_events.ijdStop,1,chatter,status), 0, "reading ISGRI events"); 
 
       TRY( DAL3IBIS_populate_newest_DS(IBIS_events.ijdStart,IBIS_events.ijdStop, &ISGRI_efficiency, DS_ISGR_EFFC,  &DAL3IBIS_open_EFFC, &DAL3IBIS_read_EFFC,chatter,status), status, "efficiency" );
 
@@ -114,16 +78,6 @@ int main(int arg, char *argv[]) {
       for(i=0; i<ISGRI_SIZE; i++)
         if((ONpixelsREVmap[i]= (dal_int*)calloc(ISGRI_SIZE, sizeof(dal_int)))==NULL) FAIL(status,"")
 
-      /*dal_element *DAL_context;
-      TRY(DAL_GC_objectOpen("/scw/0239/rev.001/idx/isgri_context_index.fits",&DAL_context,status,"input object"),status,"opening input context"); //hc!!
-      TRY( DAL3IBIS_read_REV_context_maps(DAL_context, 239, IBIS_events.obtStop, LowThreshMap, ONpixelsREVmap, &ISGRI_efficiency, 9), status, "context"); // hc!!
-
-      double x=0;
-      for (x=10;x<1000;x*=1.01) {
-          double efficiency;
-          DAL3IBIS_get_ISGRI_efficiency(x, 10, 10, &ISGRI_efficiency, &efficiency, chatter, status);
-          printf("efficiency %.5lg %.5lg\n",x,efficiency);
-      } */                
 
       TRY( DAL3IBIS_init_ISGRI_energy_calibration(&ISGRI_energy_calibration,status), status, "initializing ISGRI energy calibration");
       TRY( DAL3IBIS_init_PICsIT_energy_calibration(&PICsIT_energy_calibration,status), status, "initializing PICsIT energy calibration");
@@ -138,16 +92,10 @@ int main(int arg, char *argv[]) {
       TRY( DAL3IBIS_populate_newest_DS(IBIS_events.ijdStart,IBIS_events.ijdStop, &PICsIT_energy_calibration, DS_PICS_GO, &DAL3IBIS_open_PICsIT_GO, &DAL3IBIS_read_PICsIT_GO, chatter,status), status, "PICsIT GO" );
       
       TRY( DAL3IBIS_reconstruct_ISGRI_energies(&ISGRI_energy_calibration,&IBIS_events,chatter,status), status, "reconstructing energies");
-   //   TRY( DAL3IBIS_reconstruct_Compton_energies(&ISGRI_energy_calibration,&PICsIT_energy_calibration,&IBIS_events,chatter,status), status, "reconstructing energies");
       
 
   TRY_BLOCK_END
   
-  //DAL_GC_print();
-
-//  status=DAL_GC_free_all(chatter,status);
-
-//status=DALobjectClose(DAL_DS,DAL_SAVE,status);
   printf("Final status: %d\n",status);
 
   return(ISDC_OK);

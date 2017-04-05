@@ -1,3 +1,8 @@
+2017-01-30  Volodymyr Savchenko  <Volodymyr.Savchenko@unige.ch>
+	dal3ibis 6.0
+	* dal3ibis_calib.*: SCREW-2709
+	larger part of IBIS calibration moved to dal
+
 2012-01-30  Reiner Rohlfs  <reiner.rohlfs@unige.ch>
 	dal3ibis 5.5
 	* dal3ibis_ica.h (DAL3IBISicaIsgriNoisEff): SPR 5011
