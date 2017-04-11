@@ -6,7 +6,6 @@
 // this is all hard-coded because templates enforce 256 bins anyway
 // this is all hard-coded because background maps are provided in the same bins
 
-
 double C256_E_band_min[N_E_BAND];
 double C256_E_band_max[N_E_BAND];
 

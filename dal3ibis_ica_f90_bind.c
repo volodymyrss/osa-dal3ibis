@@ -49,6 +49,7 @@ FCALLSCFUN10(INT, DAL3IBISgetSwitchList, DAL3IBIS_GET_SWITCH_LIST, dal3ibis_get_
 
 FCALLSCFUN5(INT, DAL3IBISselectCtxt, DAL3IBIS_SELECT_CTXT, dal3ibis_select_ctxt,
 	    INT, LONGLONGV, INT, INTV, INT)
+// suspicipusly passing only LONGLONGV even if not?
 
 FCALLSCFUN5(INT, DAL3IBISctxtGetImaPar, DAL3IBIS_CTXT_GET_IMA_PAR, dal3ibis_ctxt_get_ima_par,
 	    INT, LONGLONGV, INT, INT, INT)
