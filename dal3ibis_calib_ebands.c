@@ -1,4 +1,6 @@
 #include "dal3ibis_calib_ebands.h"
+#include <stdio.h>
+#include <math.h>
 
 // this is all hard-coded to avoid reading an extra file
 // this is all hard-coded because templates enforce 256 bins anyway

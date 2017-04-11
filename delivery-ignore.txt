@@ -9,5 +9,4 @@ make_icf.py
 make_ic_l2re.py
 make_ic_lut2.py
 make_ic_mcec.py
-icaccess_test.C
 templates

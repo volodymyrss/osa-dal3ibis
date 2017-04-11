@@ -7,7 +7,6 @@
 
 /*double C256_E_band_min[N_E_BAND];
 double C256_E_band_max[N_E_BAND];
-
 int C256_E_band_reverse[E_BAND_N_REVERSE];*/
 
 inline double C256_get_E_min(int ch);
