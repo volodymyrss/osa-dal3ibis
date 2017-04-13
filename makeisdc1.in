@@ -99,7 +99,6 @@ TO_INSTALL_INC		+= dal3ibis_calib.h
 TO_INSTALL_INC		+= dal3ibis_calib_aux.h
 TO_INSTALL_INC		+= dal3ibis_calib_ebands.h
 TO_INSTALL_INC		+= dal3ibis_calib_gc.h
-TO_INSTALL_INC		+= git_version.h
 TO_INSTALL_LIB		+= ${LIB_FULL_NAME}
 TO_INSTALL_HELP		+= ${LIB_SHORT_NAME}.ps
 TO_INSTALL_F90MOD_NORMAL+= dal3ibis_f90_api.${F90MOD_EXT}
