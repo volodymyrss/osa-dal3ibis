@@ -28,6 +28,19 @@
 #include <cfortran_isdc.h>
 
 
+// would prefer to check size of OBTime, but it's not allowed
+#if SIZEOF_LONG == 8
+
+#define P_OBTIME_CFORTRAN_TYPE LONGV
+#define PP_OBTIME_CFORTRAN_TYPE LONGVV
+
+#else
+
+#define P_OBTIME_CFORTRAN_TYPE LONGLONGV
+#define PP_OBTIME_CFORTRAN_TYPE LONGLONGVV
+
+#endif
+
 /* The following functions are FORTRAN 90 interfaces for DAL3IBIS functions  */
 /* written by Laurent Lerusse                                                */
 
@@ -45,17 +58,17 @@ FCALLSCFUN5(INT,DAL3IBISgetSizeSwitchList, DAL3IBIS_GET_SIZE_SWITCH_LIST, dal3ib
 	     INT, LONGLONG, LONGLONG, LONGV, INT) 			
 
 FCALLSCFUN10(INT, DAL3IBISgetSwitchList, DAL3IBIS_GET_SWITCH_LIST, dal3ibis_get_switch_list,  
-	     INT, LONGLONG, LONGLONG, BYTEV, BYTEV, LONGLONGV, LONGLONGV, BYTEVV, LONGV, INT)
+	     INT, LONGLONG, LONGLONG, BYTEV, BYTEV, P_OBTIME_CFORTRAN_TYPE, P_OBTIME_CFORTRAN_TYPE, BYTEVV, LONGV, INT)
 
 FCALLSCFUN5(INT, DAL3IBISselectCtxt, DAL3IBIS_SELECT_CTXT, dal3ibis_select_ctxt,
-	    INT, LONGLONGV, INT, INTV, INT)
+	    INT, P_OBTIME_CFORTRAN_TYPE, INT, LONGV, INT)
 // suspicipusly passing only LONGLONGV even if not?
 
 FCALLSCFUN5(INT, DAL3IBISctxtGetImaPar, DAL3IBIS_CTXT_GET_IMA_PAR, dal3ibis_ctxt_get_ima_par,
-	    INT, LONGLONGV, INT, INT, INT)
+	    INT, P_OBTIME_CFORTRAN_TYPE, INT, INT, INT)
 
 FCALLSCFUN7(INT, DAL3IBISctxtGetTblPar, DAL3IBIS_CTXT_GET_TBL_PAR,dal3ibis_ctxt_get_tbl_par,
-	    INT, LONGLONGV, INT, STRING, INT, INT, INT)
+	    INT, P_OBTIME_CFORTRAN_TYPE, INT, STRING, INT, INT, INT)
 
 FCALLSCFUN9(INT, DAL3IBISicaIsgriNoisEff, DAL3IBIS_ICA_ISGRI_NOIS_EFF, dal3ibis_ica_isgri_nois_eff,
-            INT, INT, LONGLONGV, LONGLONGV, DOUBLEVV, LONGV, LONGLONGV, INTVV, INT)
+            INT, INT, P_OBTIME_CFORTRAN_TYPE, P_OBTIME_CFORTRAN_TYPE, DOUBLEVV, LONGV, PP_OBTIME_CFORTRAN_TYPE, INTVV, INT)

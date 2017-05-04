@@ -526,13 +526,13 @@ int DAL3IBISgetSwitchListMceTime( DAL_ELEMENTP listPtr,
 *****************************************************************************/
 int DAL3IBISputSwitchList( DAL_ELEMENTP  listPtr,
 		           DAL3_Byte    *Y_switch,
-			   DAL3_Byte    *Z_switch,
-			   OBTime       *timeDetect,
+                   DAL3_Byte    *Z_switch,
+                   OBTime       *timeDetect,
   		       	   OBTime       *timeSwitch,
   		           DAL3_Byte    *flag_switch,
   		           long          numSwitch,
-			   OBTime	*mceTime,
-			   char 	*origin,
+                   OBTime	*mceTime,
+                   char 	*origin,
 		           int           status);
 
 /*****************************************************************************
