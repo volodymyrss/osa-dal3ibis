@@ -6,7 +6,7 @@
 /*                                                                           */
 /*                              C PROTOTYPE                                  */
 /*                                                                           */
-/*  Authors: Stéphane Paltani, Laurent Lerusse, Nicolas Produit              */
+/*  Authors: StÃ©phane Paltani, Laurent Lerusse, Nicolas Produit              */
 /*  Date:    13 August 2003                                                  */
 /*  Version: 4.3.0                                                           */
 /*                                                                           */
@@ -138,12 +138,15 @@
 
 #ifndef DAL3IBIS_INCLUDE
 #define DAL3IBIS_INCLUDE
+
+
 #include "git_version.h"
 
 #ifndef GIT_VERSION
 #define GIT_VERSION ""
 #endif
-static const char * dal3ibisversion[] = {"ISDC component dal3ibis DEBUG"};
+static const char * dal3ibisversion[] = {"ISDC component dal3ibis 6.0-"GIT_VERSION};
+
 
 	/* DAL3IBIS ERROR                                                    */
 

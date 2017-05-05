@@ -147,7 +147,7 @@ static const char * dal3ibisversion[] = {"ISDC component {{component_name}} {{co
 #ifndef GIT_VERSION
 #define GIT_VERSION ""
 #endif
-static const char * dal3ibisversion[] = {"ISDC component {{component_name}} {{component_version}}"};
+static const char * dal3ibisversion[] = {"ISDC component {{component_name}} {{component_version}}-"GIT_VERSION};
 {% endif %}
 
 	/* DAL3IBIS ERROR                                                    */

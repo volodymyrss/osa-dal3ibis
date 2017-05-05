@@ -3,5 +3,5 @@
 #undef GIT_VERSION
 #endif
 
-#define GIT_VERSION ""
+#define GIT_VERSION "-6585d641-dirty"
     

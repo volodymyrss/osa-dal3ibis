@@ -29,6 +29,7 @@
 
 
 // would prefer to check size of OBTime, but it's not allowed
+// this has to be tested wherever this is compiled
 #if SIZEOF_LONG == 8
 
 #define P_OBTIME_CFORTRAN_TYPE LONGV
