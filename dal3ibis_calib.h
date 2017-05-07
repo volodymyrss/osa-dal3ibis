@@ -160,6 +160,7 @@ typedef struct infoEvt_struct {
     long pha_too_low;
     long pha_too_high;
     long negative_energy;
+    double l2re_correction;
 } infoEvt_struct;
 
 typedef struct IBIS_events_struct {

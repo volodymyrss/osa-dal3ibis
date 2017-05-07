@@ -451,19 +451,74 @@ int DAL3IBIS_MceIsgriHkCal(dal_element *workGRP,
     for (j=0;j<8;j++)
     {
         meanT[j]=(meanT[j]+273.0)/273.0; /* to scale temperature in ratio to minimum Kelvin */
-        meanBias[j]=-meanBias[j]/100. ;
+        //meanBias[j]=-meanBias[j]/100. ; 
         meanBias[j]=1.2;  // because who cares about the bias
     }
         
     return status;
 }
 
+static int l2re_index_memory=0; // this global variable will preserve last successfully found index - faster than searching
+
+inline double interpolate_1d_array(double *arr, int i, double bin_fraction) {
+    return arr[i]+(arr[i+1]-arr[i])*bin_fraction;
+}
+
+void compute_l2re_parameters(
+        ISGRI_energy_calibration_struct *ptr_ISGRI_energy_calibration,
+        double ijd,
+        double *ptr_l2re_rt_offset,
+        double *ptr_l2re_rt_gain,
+        double *ptr_l2re_pha_offset,
+        double *ptr_l2re_pha_gain,
+        double *ptr_l2re_pha_gain2
+    ) {
+
+    int i_l2re=l2re_index_memory;
+
+    long int n_entries=ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.n_entries;
+    double *l2re_ijd=ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.ijd;
+
+    double bin_fraction=0;
+
+    int n_steps=0;
+
+    while (1) {
+        if ( (l2re_ijd[i_l2re]<ijd) && (l2re_ijd[i_l2re+1]>=ijd)) {
+            break;
+        }
+
+        if (ijd<=l2re_ijd[i_l2re]) {
+            if (i_l2re<=0)
+                break;
+            i_l2re--;
+        }
+
+        if (ijd>l2re_ijd[i_l2re+1]) {
+            if (i_l2re>=n_entries-2)
+                break;
+            i_l2re++;
+        }
+        n_steps++;
+    }
+
+    l2re_index_memory=i_l2re;
+
+    bin_fraction=(ijd-l2re_ijd[i_l2re])/(l2re_ijd[i_l2re+1]-l2re_ijd[i_l2re]);
+
+    *ptr_l2re_rt_offset = interpolate_1d_array(ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.rt_offset,i_l2re,bin_fraction);
+    *ptr_l2re_rt_gain = interpolate_1d_array(ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.rt_gain,i_l2re,bin_fraction);
+    *ptr_l2re_pha_offset = interpolate_1d_array(ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.pha_offset,i_l2re,bin_fraction);
+    *ptr_l2re_pha_gain = interpolate_1d_array(ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.pha_gain,i_l2re,bin_fraction);
+    *ptr_l2re_pha_gain2 = interpolate_1d_array(ptr_ISGRI_energy_calibration->LUT2_rapid_evolution.pha_gain2,i_l2re,bin_fraction);
+}
 
 inline int DAL3IBIS_reconstruct_ISGRI_energy(
         long isgriPha,
         short riseTime,
         short isgriY,
         short isgriZ,
+        double ijd,
         
         float *ptr_isgri_energy,
         DAL3_Byte *ptr_isgri_pi,
@@ -483,6 +538,13 @@ inline int DAL3IBIS_reconstruct_ISGRI_energy(
     int ipha;
     int ipha2;
 
+    double l2re_rt_offset;
+    double l2re_rt_gain;
+    double l2re_pha_offset;
+    double l2re_pha_gain;
+    double l2re_pha_gain2;
+
+    double l2re_correction=0;
 
     if ((isgriY<0) | (isgriY>=128) |(isgriZ<0) |(isgriZ>=128)) { // 127?..
          ptr_infoEvt->bad_pixel_yz++;
@@ -501,7 +563,6 @@ inline int DAL3IBIS_reconstruct_ISGRI_energy(
     pha = pha * ptr_ISGRI_energy_calibration->LUT1.pha_gain[isgriY][isgriZ] + ptr_ISGRI_energy_calibration->LUT1.pha_offset[isgriY][isgriZ];
     
     // MCE correction
-    
     mce     = yz_to_mce(isgriY,isgriZ);
 
     rt = rt * ptr_ISGRI_energy_calibration->MCE_correction.rt_gain[mce] + ptr_ISGRI_energy_calibration->MCE_correction.rt_offset[mce];
@@ -510,7 +571,26 @@ inline int DAL3IBIS_reconstruct_ISGRI_energy(
           + 2*15./pha * ptr_ISGRI_energy_calibration->MCE_correction.pha_gain2[mce] 
           + rt * ptr_ISGRI_energy_calibration->MCE_correction.rt_pha_cross_gain[mce];
 
-    // LUT2 rapid will be implemented here
+    // LUT2 rapid evolution 
+    
+    compute_l2re_parameters(ptr_ISGRI_energy_calibration,
+                           ijd,
+                           &l2re_rt_offset,
+                           &l2re_rt_gain,
+                           &l2re_pha_offset,
+                           &l2re_pha_gain,
+                           &l2re_pha_gain2);
+    
+    rt = l2re_rt_offset + \
+         l2re_rt_gain * rt;
+
+    pha = l2re_pha_offset + \
+          l2re_pha_gain * pha + \
+          l2re_pha_gain2 * pha*pha;
+
+    l2re_correction = l2re_pha_offset + \
+                      l2re_pha_gain*60 + \
+                      l2re_pha_gain2*60*60;
 
     /// compression to LUT2 index
     irt = round(rt); 
@@ -539,6 +619,7 @@ inline int DAL3IBIS_reconstruct_ISGRI_energy(
 
     *ptr_isgri_pi=irt;
     ptr_infoEvt->good++;
+    ptr_infoEvt->l2re_correction = (ptr_infoEvt->l2re_correction*(ptr_infoEvt->good-1)+l2re_correction)/ptr_infoEvt->good;
 }
 
 
@@ -594,6 +675,7 @@ int DAL3IBIS_reconstruct_Compton_energies(
                 ptr_IBIS_events->riseTime[i],
                 ptr_IBIS_events->isgriY[i],
                 ptr_IBIS_events->isgriZ[i],
+                ptr_IBIS_events->IJD[i],
 
                 &ptr_IBIS_events->isgri_energy[i],
                 &ptr_IBIS_events->isgri_pi[i],
@@ -629,6 +711,9 @@ int DAL3IBIS_reconstruct_Compton_energies(
         RILlogMessage(NULL, Log_0, "    PHA too low: %li",ptr_IBIS_events->infoEvt.pha_too_low);
         RILlogMessage(NULL, Log_0, "   PHA too high: %li",ptr_IBIS_events->infoEvt.pha_too_high);
         RILlogMessage(NULL, Log_0, "negative energy: %li",ptr_IBIS_events->infoEvt.negative_energy);
+        RILlogMessage(NULL, Log_0, "\n");
+        RILlogMessage(NULL, Log_0, "L2RE average PHA correction at 60 keV:");
+        RILlogMessage(NULL, Log_0,"                : %.5lg",ptr_IBIS_events->infoEvt.l2re_correction);
     };
 
     return status;
@@ -647,12 +732,12 @@ int DAL3IBIS_reconstruct_ISGRI_energies(
 
 
     for (i=0; i<ptr_IBIS_events->numEvents; i++) {
-
         DAL3IBIS_reconstruct_ISGRI_energy(
                 ptr_IBIS_events->isgriPha[i],
                 ptr_IBIS_events->riseTime[i],
                 ptr_IBIS_events->isgriY[i],
                 ptr_IBIS_events->isgriZ[i],
+                ptr_IBIS_events->IJD[i],
 
                 &ptr_IBIS_events->isgri_energy[i],
                 &ptr_IBIS_events->isgri_pi[i],
@@ -674,6 +759,9 @@ int DAL3IBIS_reconstruct_ISGRI_energies(
         RILlogMessage(NULL, Log_0, "    PHA too low: %li",ptr_IBIS_events->infoEvt.pha_too_low);
         RILlogMessage(NULL, Log_0, "   PHA too high: %li",ptr_IBIS_events->infoEvt.pha_too_high);
         RILlogMessage(NULL, Log_0, "negative energy: %li",ptr_IBIS_events->infoEvt.negative_energy);
+        RILlogMessage(NULL, Log_0, "\n");
+        RILlogMessage(NULL, Log_0, "L2RE average PHA correction at 60 keV:");
+        RILlogMessage(NULL, Log_0,"                : %.5lg",ptr_IBIS_events->infoEvt.l2re_correction);
     };
 
     return status;
@@ -761,6 +849,7 @@ int DAL3IBIS_read_IBIS_events(dal_element *workGRP,
     ptr_IBIS_events->infoEvt.pha_too_low=0;
     ptr_IBIS_events->infoEvt.pha_too_high=0;
     ptr_IBIS_events->infoEvt.negative_energy=0;
+    ptr_IBIS_events->infoEvt.l2re_correction=0;
     ptr_IBIS_events->event_kind=event_kind;
     if (event_kind == COMPTON_SGLE || event_kind == COMPTON_MULE ) {
         ptr_IBIS_events->isgriPha_scale=8;
@@ -823,6 +912,8 @@ int DAL3IBIS_read_IBIS_events(dal_element *workGRP,
     status=DAL_GC_allocateDataBuffer((void **)&(ptr_IBIS_events->riseTime), buffSize, status,"ISGRI events RT");
     status=DAL_GC_allocateDataBuffer((void **)&(ptr_IBIS_events->isgriY),   buffSize, status,"ISGRI events Y");
     status=DAL_GC_allocateDataBuffer((void **)&(ptr_IBIS_events->isgriZ),   buffSize, status,"ISGRI events Z");
+    buffSize= ptr_IBIS_events->numEvents * sizeof(double);
+    status=DAL_GC_allocateDataBuffer((void **)&(ptr_IBIS_events->IJD), buffSize, status,"ISGRI events Z");
 
     if (event_kind == COMPTON_SGLE || event_kind == COMPTON_MULE ) {
         status=DAL_GC_allocateDataBuffer((void **)&(ptr_IBIS_events->picsitPha),   buffSize, status,"PICsIT events PHA");
@@ -855,6 +946,13 @@ int DAL3IBIS_read_IBIS_events(dal_element *workGRP,
     status=DAL3IBISgetEvents(ISGRI_Y,   &type, (void *)ptr_IBIS_events->isgriY,   status);
     type=DAL_BYTE;
     status=DAL3IBISgetEvents(ISGRI_Z,   &type, (void *)ptr_IBIS_events->isgriZ,   status);
+            
+    OBTime *event_OBT;
+    status=DAL_GC_allocateDataBuffer((void **)&(event_OBT), ptr_IBIS_events->numEvents*sizeof(OBTime), status,"tmp OBT array");
+
+    type=DAL3_OBT;
+    status=DAL3IBISgetEvents(OB_TIME,   &type, (void *)event_OBT,   status);
+    status=DAL3AUXconvertOBT2IJD(workGRP, TCOR_ANY, ptr_IBIS_events->numEvents, (OBTime*)event_OBT, (double*)ptr_IBIS_events->IJD, status);
 
     if (event_kind == COMPTON_SGLE || event_kind == COMPTON_MULE ) {
         type=DAL_BYTE;
