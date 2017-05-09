@@ -139,9 +139,7 @@
 #ifndef DAL3IBIS_INCLUDE
 #define DAL3IBIS_INCLUDE
 
-
-static const char * dal3ibisversion[] = {"ISDC component dal3ibis 6.0"};
-
+static const char * dal3ibisversion[] = {"ISDC component dal3ibis 6.0-cfd03ac0-dirty"};
 
 	/* DAL3IBIS ERROR                                                    */
 

@@ -17,7 +17,7 @@
 # library, like: dal, hello, ril, common, etc. Otherwise name is chosen
 # from names of executables/targets defined in this make file.
 
-TAR_FILE_NAME		= dal3ibis-6.0
+TAR_FILE_NAME		= {{component_name}}-{{component_version}}
 
 # ====================== ISDC SOFTWARE TREE BRANCH  ======================
 # 
@@ -92,7 +92,7 @@ ${LIB_FULL_NAME}:	${LIB_OBJECTS}
 
 CLEAN_TARGETS		+= ${LIB_FULL_NAME}
 ALL_TARGETS		+= ${LIB_FULL_NAME}
-TO_INSTALL_BIN		+= {% to_install_bin_extra %}
+TO_INSTALL_BIN		+= {{ to_install_bin_extra }}
 TO_INSTALL_INC		+= dal3ibis.h
 TO_INSTALL_INC		+= dal3ibis_ica.h
 TO_INSTALL_INC		+= dal3ibis_calib.h
