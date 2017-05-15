@@ -27,21 +27,6 @@
 
 #include <cfortran_isdc.h>
 
-
-// would prefer to check size of OBTime, but it's not allowed
-// this has to be tested wherever this is compiled
-#if SIZEOF_LONG == 8
-
-#define P_OBTIME_CFORTRAN_TYPE LONGV
-#define PP_OBTIME_CFORTRAN_TYPE LONGVV
-
-#else
-
-#define P_OBTIME_CFORTRAN_TYPE LONGLONGV
-#define PP_OBTIME_CFORTRAN_TYPE LONGLONGVV
-
-#endif
-
 /* The following functions are FORTRAN 90 interfaces for DAL3IBIS functions  */
 /* written by Laurent Lerusse                                                */
 

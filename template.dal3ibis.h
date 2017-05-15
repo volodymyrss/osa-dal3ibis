@@ -187,6 +187,19 @@ typedef enum {
 #define IBIS_TYPE              int
 #define IBIS_evpar             int
 
+#if SIZEOF_LONG == 8
+
+#define P_OBTIME_CFORTRAN_TYPE LONGV
+#define PP_OBTIME_CFORTRAN_TYPE LONGVV
+
+#else
+
+#define P_OBTIME_CFORTRAN_TYPE LONGLONGV
+#define PP_OBTIME_CFORTRAN_TYPE LONGLONGVV
+
+#endif
+
+
 #else
 #ifdef __CINT__
 
