@@ -712,8 +712,8 @@ int DAL3IBIS_reconstruct_Compton_energies(
         RILlogMessage(NULL, Log_0, "   PHA too high: %li",ptr_IBIS_events->infoEvt.pha_too_high);
         RILlogMessage(NULL, Log_0, "negative energy: %li",ptr_IBIS_events->infoEvt.negative_energy);
         RILlogMessage(NULL, Log_0, "\n");
-        RILlogMessage(NULL, Log_0, "L2RE average PHA correction at 60 keV:");
-        RILlogMessage(NULL, Log_0,"                : %.5lg",ptr_IBIS_events->infoEvt.l2re_correction);
+        RILlogMessage(NULL, Log_0, "L2RE average PHA correction");
+        RILlogMessage(NULL, Log_0,"       at 60 keV: %.5lg",ptr_IBIS_events->infoEvt.l2re_correction);
     };
 
     return status;
