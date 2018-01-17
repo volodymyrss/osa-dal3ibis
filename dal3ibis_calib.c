@@ -553,14 +553,6 @@ inline int DAL3IBIS_reconstruct_ISGRI_energy(
          return -1;
     };
 
-    ////...................
-    int track=0;
-    if (fabs(riseTime-40)<5 && fabs(isgriPha-1000)<1) {
-        printf("found favorite photon, will track %i %i\n",(int)riseTime,(int)isgriPha);
-        track=1;
-    }
-    ////...................
-
 
     pha = pha_scale * ( isgriPha + DAL3GENrandomDoubleX1() - 0.5);
     rt = riseTime + DAL3GENrandomDoubleX1() - 0.5;
@@ -568,20 +560,8 @@ inline int DAL3IBIS_reconstruct_ISGRI_energy(
     // 256 channels for LUT2 calibration scaled 
     rt = 2.*rt/2.4+5.0;  
     
-    if (track)
-        printf("scaled rt, pha %.5lg %.5lg\n",rt,pha);
-    
     rt = rt * ptr_ISGRI_energy_calibration->LUT1.rt_gain[isgriY][isgriZ] + ptr_ISGRI_energy_calibration->LUT1.rt_offset[isgriY][isgriZ];
     pha = pha * ptr_ISGRI_energy_calibration->LUT1.pha_gain[isgriY][isgriZ] + ptr_ISGRI_energy_calibration->LUT1.pha_offset[isgriY][isgriZ];
-
-    if (track)
-        printf("pixel %i %i LUT1 RT G %.5lg  O %.5lg PHA G %.5lg O %.5lg\n",(int)isgriY,(int)isgriZ,
-                ptr_ISGRI_energy_calibration->LUT1.rt_gain[isgriY][isgriZ], ptr_ISGRI_energy_calibration->LUT1.rt_offset[isgriY][isgriZ],
-                ptr_ISGRI_energy_calibration->LUT1.pha_gain[isgriY][isgriZ], ptr_ISGRI_energy_calibration->LUT1.pha_offset[isgriY][isgriZ]
-            );
-
-    if (track)
-        printf("pha, rt  after LUT1 %.5lg %.5lg\n",pha,rt);
 
     
     // MCE correction
@@ -632,13 +612,6 @@ inline int DAL3IBIS_reconstruct_ISGRI_energy(
     double gradient=(ptr_ISGRI_energy_calibration->LUT2[irt+(ipha+1)*ISGRI_LUT2_N_RT]-ptr_ISGRI_energy_calibration->LUT2[irt+ipha*ISGRI_LUT2_N_RT]); // ipha+1 danger
     
     *ptr_isgri_energy+=gradient*(pha-(double)ipha);
-
-    if (track)
-        printf("to LUT2 pha %i %i\n",(int)ipha,(int)irt);
-
-    if (track)
-        printf("LUT2 gives energy %.5lg\n",*ptr_isgri_energy);
-
 
     
     // invalid LUT2 values
