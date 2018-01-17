@@ -1744,7 +1744,7 @@ int DAL3IBIS_read_REV_context_maps(dal_element   *REVcontext,       // DOL to th
     int i;
     if (chatter>1) {
         for (i=0;i<N_LT;i++) {
-            RILstatus = RILlogMessage(NULL, Log_1,"index %3i LT %8.4lg N %5i %8.4lg%% or %8.4lg%% of usable",
+            RILstatus = RILlogMessage(NULL, Log_1,"Index %3i LT %8.4lg N %5i %8.4lg%% or %8.4lg%% of usable",
                         i,
                         ptr_ISGRI_efficiency->LT_mapping[i],
                         LT_count[i],
