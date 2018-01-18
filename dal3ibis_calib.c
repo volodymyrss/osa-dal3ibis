@@ -1568,7 +1568,7 @@ int DAL3IBIS_read_EFFC(dal_element **ptr_ptr_dal_EFFC, ISGRI_efficiency_struct *
             }
 
             if (pixel_group[i]<0) {
-                RILlogMessage(NULL, Log_0, "groupping %i contains mapping of size %i, which?",pixel_grouping[i],-pixel_group[i]);
+                RILlogMessage(NULL, Log_0, "groupping %i contains mapping of size %i:",pixel_grouping[i],-pixel_group[i]);
 
                 if (pixel_grouping[i] == PIXEL_GROUPING_LT) { // so far only LT mapping allowed
                     //if (-pixel_group[i] > N_LT) 
@@ -1576,7 +1576,7 @@ int DAL3IBIS_read_EFFC(dal_element **ptr_ptr_dal_EFFC, ISGRI_efficiency_struct *
                     //    return -1; // !!
                     for (j=0;j<-pixel_group[i] && j<N_LT;j++) {
                         ptr_ISGRI_efficiency->LT_mapping[j]=efficiency[i][j];
-                        RILlogMessage(NULL, Log_0, "mapping %i => %.5lg",j,efficiency[i][j]);
+                        RILlogMessage(NULL, Log_0, "efficiency group member mapping %i => %.5lg",j,efficiency[i][j]);
                     }
                 } else {
                     RILlogMessage(NULL, Warning_1, "undefined grouping: %i",pixel_grouping[i]);
@@ -1715,7 +1715,7 @@ int DAL3IBIS_read_REV_context_maps(dal_element   *REVcontext,       // DOL to th
 
     RILstatus = RILlogMessage(NULL, Log_1,"%i / %.5lg%% of pixels have usable LT",N_good_total,((float)N_good_total)/ISGRI_SIZE/ISGRI_SIZE*100.);
     int i;
-    if (chatter>1) {
+    if (chatter>0) {
         for (i=0;i<N_LT;i++) {
             RILstatus = RILlogMessage(NULL, Log_1,"Index %3i LT %8.4lg N %5i %8.4lg%% or %8.4lg%% of usable",
                         i,
