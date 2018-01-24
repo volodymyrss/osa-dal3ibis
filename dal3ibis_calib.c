@@ -953,9 +953,6 @@ int DAL3IBIS_read_IBIS_events(dal_element *workGRP,
     OBTime *event_OBT;
     status=DAL_GC_allocateDataBuffer((void **)&(event_OBT), ptr_IBIS_events->numEvents*sizeof(OBTime), status,"tmp OBT array");
 
-    type=DAL3_OBT;
-    status=DAL3IBISgetEvents(OB_TIME,   &type, (void *)event_OBT,   status);
-    status=DAL3AUXconvertOBT2IJD(workGRP, TCOR_ANY, ptr_IBIS_events->numEvents, (OBTime*)event_OBT, (double*)ptr_IBIS_events->IJD, status);
 
     if (event_kind == COMPTON_SGLE || event_kind == COMPTON_MULE ) {
         type=DAL_BYTE;
@@ -969,6 +966,9 @@ int DAL3IBIS_read_IBIS_events(dal_element *workGRP,
 
     if (gti) {
         TRY_BLOCK_BEGIN
+            type=DAL3_OBT;
+            status=DAL3IBISgetEvents(OB_TIME,   &type, (void *)event_OBT,   status);
+            status=DAL3AUXconvertOBT2IJD(workGRP, TCOR_ANY, ptr_IBIS_events->numEvents, (OBTime*)event_OBT, (double*)ptr_IBIS_events->IJD, status);
 
             type=DAL3_OBT;
             TRY( DAL3IBISgetEventsBins(OB_TIME, &type, 1,1, &ptr_IBIS_events->obtStart, status), status,  "get OBT start");
